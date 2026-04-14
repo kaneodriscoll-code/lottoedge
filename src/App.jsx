@@ -26,15 +26,19 @@ function runBacktest(numbers, draws, prize1) {
   const divCounts = {1:0,2:0,3:0,4:0,5:0,6:0};
   let prize=0; const div1Hits=[];
   for (const draw of draws) {
+    let bestDiv = 0;
     for (const combo of combos) {
       const div = checkDiv(combo, draw.nums, draw.supps);
-      if (div > 0) {
-        divCounts[div]++;
-        prize += prizes[div];
-        if (div===1) {
-          const h = `${draw.date} — ${draw.nums.join(", ")}`;
-          if (!div1Hits.includes(h)) div1Hits.push(h);
-        }
+      if (div > 0 && (bestDiv === 0 || div < bestDiv)) {
+        bestDiv = div;
+      }
+    }
+    if (bestDiv > 0) {
+      divCounts[bestDiv]++;
+      prize += prizes[bestDiv];
+      if (bestDiv === 1) {
+        const h = `${draw.date} — ${draw.nums.join(", ")}`;
+        if (!div1Hits.includes(h)) div1Hits.push(h);
       }
     }
   }
