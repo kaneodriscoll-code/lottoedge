@@ -2442,7 +2442,14 @@ export default function App() {
   const [sets,setSets]=useState(["","",""]);
   const [results,setResults]=useState([null,null,null]);
   const [loading,setLoading]=useState([false,false,false]);
-
+export default function App() {
+  const [game,setGame]=useState("sat");
+  const [tab,setTab]=useState("backtest");
+  const [sets,setSets]=useState(["","",""]);
+  const [results,setResults]=useState([null,null,null]);
+  const [loading,setLoading]=useState([false,false,false]);
+  const [trialStatus] = useState(() => getTrialStatus());
+  const [showPaywall, setShowPaywall] = useState(false);
   const currentDraws=game==="sat"?SAT_DRAWS:MM_DRAWS;
   const prize1=game==="sat"?5000000:1000000;
   const label1=game==="sat"?"SAT LOTTO $5M":"MM $1M";
