@@ -2459,10 +2459,15 @@ export default function App() {
           <div style={{color:"var(--acc)",fontWeight:900,fontSize:19,letterSpacing:4}}>LOTTOEDGE</div>
           <div style={{color:"#5a6f96",fontSize:8,letterSpacing:3}}>BACKTEST ENGINE</div>
         </div>
-        <div style={{textAlign:"right"}}>
+        <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
           <div style={{color:"#e2e8f0",fontWeight:700,fontSize:12}}>{currentDraws.length.toLocaleString()} DRAWS</div>
           <div style={{color:"#5a6f96",fontSize:8}}>{dateRange}</div>
-          <div style={{color:"var(--acc)",fontSize:8,marginTop:2}}>{game==="sat"?"PRIZE $5–6M · SAT WEEKLY":"PRIZE $1M · MON/WED/FRI"}</div>
+          <div style={{color:"var(--acc)",fontSize:8}}>{game==="sat"?"PRIZE $5–6M · SAT WEEKLY":"PRIZE $1M · MON/WED/FRI"}</div>
+          <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer" style={{
+            background:"var(--acc)",color:"#070c18",fontWeight:900,fontSize:9,
+            letterSpacing:1.5,padding:"6px 14px",borderRadius:8,textDecoration:"none",
+            marginTop:4,fontFamily:"inherit",
+          }}>🔓 GO PREMIUM · 7 DAYS FREE</a>
         </div>
       </div>
 
