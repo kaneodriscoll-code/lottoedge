@@ -1,5 +1,21 @@
 import { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 
+const TRIAL_DAYS = 7;
+const STRIPE_URL = "https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00";
+
+function getTrialStatus() {
+  const start = localStorage.getItem("le_trial_start");
+  if (!start) {
+    localStorage.setItem("le_trial_start", Date.now().toString());
+    return { expired: false, daysLeft: TRIAL_DAYS };
+  }
+  const elapsed = (Date.now() - parseInt(start)) / (1000 * 60 * 60 * 24);
+  const daysLeft = Math.max(0, Math.ceil(TRIAL_DAYS - elapsed));
+  return { expired: elapsed >= TRIAL_DAYS, daysLeft };
+}
+
+function getCombinations(arr, k) {
 function getCombinations(arr, k) {
   if (k === 0) return [[]];
   if (arr.length < k) return [];
