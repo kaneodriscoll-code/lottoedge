@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useState, useCallback } from "react";
+
 
 const TRIAL_DAYS = 7;
 const STRIPE_URL = "https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00";
@@ -16,7 +16,7 @@ function getTrialStatus() {
 }
 
 function getCombinations(arr, k) {
-function getCombinations(arr, k) {
+
   if (k === 0) return [[]];
   if (arr.length < k) return [];
   const [first, ...rest] = arr;
@@ -2442,12 +2442,7 @@ export default function App() {
   const [sets,setSets]=useState(["","",""]);
   const [results,setResults]=useState([null,null,null]);
   const [loading,setLoading]=useState([false,false,false]);
-export default function App() {
-  const [game,setGame]=useState("sat");
-  const [tab,setTab]=useState("backtest");
-  const [sets,setSets]=useState(["","",""]);
-  const [results,setResults]=useState([null,null,null]);
-  const [loading,setLoading]=useState([false,false,false]);
+
   const [trialStatus] = useState(() => getTrialStatus());
   const [showPaywall, setShowPaywall] = useState(false);
   const currentDraws=game==="sat"?SAT_DRAWS:MM_DRAWS;
