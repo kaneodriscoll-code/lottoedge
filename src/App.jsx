@@ -5103,8 +5103,7 @@ export default function App() {
         <div style={{textAlign:"center",marginTop:40,color:"#1e2d44",fontSize:8,letterSpacing:2}}>
           LOTTOEDGE · SIMULATED DATA · NOT FINANCIAL ADVICE · PRIZE ESTIMATES ONLY
         </div>
-      </div>
-   {showPaywall && (
+      {showPaywall && (
         <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(7,12,24,0.95)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
           <div style={{background:"#0f1926",border:"2px solid var(--acc)",borderRadius:16,padding:"40px 32px",maxWidth:420,textAlign:"center",width:"100%"}}>
             <div style={{fontSize:40,marginBottom:16}}>🔒</div>
