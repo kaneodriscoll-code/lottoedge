@@ -2553,4 +2553,19 @@ export default function App() {
       </div>
     </div>
   );
-}
+{showPaywall && (
+        <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(7,12,24,0.95)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
+          <div style={{background:"#0f1926",border:"2px solid var(--acc)",borderRadius:16,padding:"40px 32px",maxWidth:420,textAlign:"center",width:"100%"}}>
+            <div style={{fontSize:40,marginBottom:16}}>🔒</div>
+            <div style={{color:"var(--acc)",fontWeight:900,fontSize:18,letterSpacing:3,marginBottom:8}}>FREE TRIAL ENDED</div>
+            <div style={{color:"#e2e8f0",fontSize:13,marginBottom:8}}>Your 7-day free trial has expired.</div>
+            <div style={{color:"#5a6f96",fontSize:11,marginBottom:28}}>Unlock unlimited backtesting for just $7.99/month.</div>
+            <a href={STRIPE_URL} target="_blank" rel="noopener noreferrer" style={{display:"block",background:"var(--acc)",color:"#070c18",fontWeight:900,fontSize:12,letterSpacing:2,padding:"14px 24px",borderRadius:10,textDecoration:"none",marginBottom:12}}>
+              🔓 GO PREMIUM · $7.99/MONTH
+            </a>
+            <button onClick={() => setShowPaywall(false)} style={{background:"transparent",border:"1px solid #1e2d44",color:"#5a6f96",borderRadius:8,padding:"8px 20px",fontSize:10,cursor:"pointer",fontFamily:"inherit",letterSpacing:1}}>
+              CLOSE
+            </button>
+          </div>
+        </div>
+      )}
