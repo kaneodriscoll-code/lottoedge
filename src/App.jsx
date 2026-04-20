@@ -1,8 +1,19 @@
-import { useState, useCallback, useEffect } from "react";
-import { supabase } from "./supabase.js";
+import { useState, useCallback } from "react";
+
 
 const TRIAL_DAYS = 7;
+const STRIPE_URL = "https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00";
 
+function getTrialStatus() {
+  const start = localStorage.getItem("le_trial_start");
+  if (!start) {
+    localStorage.setItem("le_trial_start", Date.now().toString());
+    return { expired: false, daysLeft: TRIAL_DAYS };
+  }
+  const elapsed = (Date.now() - parseInt(start)) / (1000 * 60 * 60 * 24);
+  const daysLeft = Math.max(0, Math.ceil(TRIAL_DAYS - elapsed));
+  return { expired: elapsed >= TRIAL_DAYS, daysLeft };
+}
 
 function getCombinations(arr, k) {
 
@@ -2425,415 +2436,118 @@ function FrequencyTab({draws}) {
   );
 }
 
-
-// Convert DD/MM/YYYY → Date object
-function parseDMY(str) {
-  const [d, m, y] = str.split("/");
-  return new Date(+y, +m - 1, +d);
-}
-// Convert DD/MM/YYYY → YYYY-MM-DD (for <input type="date">)
-function dmyToIso(str) {
-  return str.split("/").reverse().join("-");
-}
-
-// ── Auth screen ───────────────────────────────────────────────────────────────
-
-function AuthScreen() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setLoading(true);
-    setError("");
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
-    });
-    if (err) setError(err.message);
-    else setSent(true);
-    setLoading(false);
-  };
-
-  const base = {
-    minHeight: "100vh", background: "#070c18", color: "#e2e8f0",
-    fontFamily: "'JetBrains Mono','Fira Code',monospace",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-
-  if (sent) return (
-    <div style={base}>
-      <div style={{ textAlign: "center", maxWidth: 400 }}>
-        <div style={{ color: "#00d68f", fontWeight: 900, fontSize: 22, letterSpacing: 3, marginBottom: 8 }}>LOTTOEDGE</div>
-        <div style={{ color: "#e2e8f0", fontSize: 15, marginBottom: 8 }}>Check your email</div>
-        <div style={{ color: "#5a6f96", fontSize: 12 }}>
-          We sent a magic link to <strong style={{ color: "#e2e8f0" }}>{email}</strong>.<br />
-          Click it to sign in — no password needed.
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={base}>
-      <div style={{ width: "100%", maxWidth: 380, padding: "0 24px" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ color: "#00d68f", fontWeight: 900, fontSize: 24, letterSpacing: 3 }}>LOTTOEDGE</div>
-          <div style={{ color: "#5a6f96", fontSize: 10, letterSpacing: 2, marginTop: 4 }}>BACKTEST ENGINE</div>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 12 }}>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-              style={{
-                width: "100%", background: "#0f1926", border: "1px solid #1e2d44",
-                color: "#e2e8f0", borderRadius: 8, padding: "12px 14px",
-                fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
-              }}
-            />
-          </div>
-          {error && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 10 }}>{error}</div>}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%", background: loading ? "#1e2d44" : "#00d68f",
-              color: loading ? "#5a6f96" : "#070c18", border: "none",
-              borderRadius: 8, padding: "13px", fontWeight: 900, fontSize: 13,
-              cursor: loading ? "not-allowed" : "pointer", letterSpacing: 1,
-              fontFamily: "inherit",
-            }}
-          >{loading ? "SENDING..." : "SIGN IN / SIGN UP →"}</button>
-        </form>
-        <div style={{ color: "#1e2d44", fontSize: 10, textAlign: "center", marginTop: 20 }}>
-          7-day free trial · No credit card required to start
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Paywall ───────────────────────────────────────────────────────────────────
-
-function Paywall({ daysUsed, email, onSignOut }) {
-  return (
-    <div style={{
-      minHeight: "100vh", background: "#070c18", color: "#e2e8f0",
-      fontFamily: "'JetBrains Mono','Fira Code',monospace",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{ width: "100%", maxWidth: 420, padding: "0 24px", textAlign: "center" }}>
-        <div style={{ color: "#00d68f", fontWeight: 900, fontSize: 24, letterSpacing: 3, marginBottom: 6 }}>LOTTOEDGE</div>
-        <div style={{ color: "#5a6f96", fontSize: 10, letterSpacing: 2, marginBottom: 32 }}>BACKTEST ENGINE</div>
-        <div style={{
-          background: "#0f1926", border: "1px solid #1e2d44",
-          borderRadius: 12, padding: "28px 24px", marginBottom: 20,
-        }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
-          <div style={{ color: "#f87171", fontWeight: 800, fontSize: 13, letterSpacing: 1, marginBottom: 10 }}>
-            YOUR FREE TRIAL HAS ENDED
-          </div>
-          <div style={{ color: "#5a6f96", fontSize: 12, lineHeight: 1.7, marginBottom: 20 }}>
-            You've used <strong style={{ color: "#e2e8f0" }}>{daysUsed} of {TRIAL_DAYS} free days</strong>.<br />
-            Subscribe to keep access to full draw history,<br />
-            system analysis, and frequency charts.
-          </div>
-          <a
-            href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block", background: "#00d68f", color: "#070c18",
-              fontWeight: 900, fontSize: 12, letterSpacing: 1.5,
-              padding: "14px 24px", borderRadius: 8, textDecoration: "none",
-              marginBottom: 12,
-            }}
-          >SUBSCRIBE · $7.99 AUD/MONTH →</a>
-          <div style={{ color: "#1e2d44", fontSize: 10 }}>Signed in as {email}</div>
-        </div>
-        <button
-          onClick={onSignOut}
-          style={{
-            background: "transparent", border: "none", color: "#1e2d44",
-            fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-            textDecoration: "underline",
-          }}
-        >sign out</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Main App ──────────────────────────────────────────────────────────────────
-
 export default function App() {
-  // ── auth state ──────────────────────────────────────────────────────────────
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [game,setGame]=useState("sat");
+  const [tab,setTab]=useState("backtest");
+  const [sets,setSets]=useState(["","",""]);
+  const [results,setResults]=useState([null,null,null]);
+  const [loading,setLoading]=useState([false,false,false]);
 
-  const loadProfile = useCallback(async (user) => {
-    await supabase.from("profiles").upsert(
-      { id: user.id, email: user.email },
-      { onConflict: "id", ignoreDuplicates: true }
-    );
-    const { data } = await supabase
-      .from("profiles").select("*").eq("id", user.id).single();
-    setProfile(data ?? null);
-  }, []);
+  const [trialStatus] = useState(() => getTrialStatus());
+  const [showPaywall, setShowPaywall] = useState(false);
+  const currentDraws=game==="sat"?SAT_DRAWS:MM_DRAWS;
+  const prize1=game==="sat"?5000000:1000000;
+  const label1=game==="sat"?"SAT LOTTO $5M":"MM $1M";
+  const presets=game==="sat"?SAT_PRESETS:MM_PRESETS;
+  const accent=game==="sat"?"#00d68f":"#f5a623";
+  const dateRange=currentDraws.length>0?`${currentDraws[currentDraws.length-1].date} – ${currentDraws[0].date}`:"";
 
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      setSession(s);
-      if (s) await loadProfile(s.user);
-      setAuthChecked(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
-        setSession(s);
-        if (s) await loadProfile(s.user);
-        else setProfile(null);
-      }
-    );
-    return () => subscription.unsubscribe();
-  }, [loadProfile]);
-
-  const handleSignOut = () => supabase.auth.signOut();
-
-  // ── derived values (not hooks) ─────────────────────────────────────────────
-  const daysUsed = profile
-    ? Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / 86_400_000)
-    : 0;
-  const trialExpired = daysUsed >= TRIAL_DAYS;
-
-  // ── app state — ALL hooks before any early return ──────────────────────────
-  const [game, setGame] = useState("sat");
-  const [tab, setTab] = useState("backtest");
-  const [sets, setSets] = useState(["", "", ""]);
-  const [results, setResults] = useState([null, null, null]);
-  const [loading, setLoading] = useState([false, false, false]);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-
-  // ── early returns (after all hooks) ───────────────────────────────────────
-  if (!authChecked) return (
-    <div style={{
-      minHeight: "100vh", background: "#070c18", color: "#5a6f96",
-      fontFamily: "'JetBrains Mono',monospace",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 11, letterSpacing: 2,
-    }}>LOADING...</div>
-  );
-  if (!session) return <AuthScreen />;
-  if (trialExpired && !profile?.subscribed) {
-    return <Paywall daysUsed={daysUsed} email={profile?.email ?? ""} onSignOut={handleSignOut} />;
-  }
-
-  // ── game-dependent values ──────────────────────────────────────────────────
-  const currentDraws = game === "sat" ? SAT_DRAWS : MM_DRAWS;
-  const prize1       = game === "sat" ? 5000000 : 1000000;
-  const label1       = game === "sat" ? "SAT LOTTO $5M" : "MM $1M";
-  const presets      = game === "sat" ? SAT_PRESETS : MM_PRESETS;
-  const accent       = game === "sat" ? "#00d68f" : "#f5a623";
-  const dateRange    = currentDraws.length > 0
-    ? `${currentDraws[currentDraws.length - 1].date} – ${currentDraws[0].date}`
-    : "";
-
-  // ── date filter ────────────────────────────────────────────────────────────
-  const minIso = currentDraws.length ? dmyToIso(currentDraws[currentDraws.length - 1].date) : "";
-  const maxIso = currentDraws.length ? dmyToIso(currentDraws[0].date) : "";
-
-  const filteredDraws = (() => {
-    if (!dateFrom && !dateTo) return currentDraws;
-    const from = dateFrom ? new Date(dateFrom) : null;
-    const to   = dateTo   ? new Date(dateTo)   : null;
-    return currentDraws.filter(d => {
-      const dt = parseDMY(d.date);
-      if (from && dt < from) return false;
-      if (to   && dt > to)   return false;
-      return true;
-    });
-  })();
-
-  const resetDateFilter = () => { setDateFrom(""); setDateTo(""); };
-
-  // ── backtest handlers ──────────────────────────────────────────────────────
-  const runSet = i => {
-    const nums = sets[i].split(/[\s,]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= 45);
-    if (nums.length < 6) return;
-    setLoading(l => { const n = [...l]; n[i] = true; return n; });
-    setTimeout(() => {
-      const res = runBacktest(nums, filteredDraws, prize1);
-      setResults(r => { const n = [...r]; n[i] = res; return n; });
-      setLoading(l => { const n = [...l]; n[i] = false; return n; });
-    }, 50);
+  const runSet=i=>{
+    if(trialStatus.expired){setShowPaywall(true);return;}
+    const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
+    if(nums.length<6)return;
+    setLoading(l=>{const n=[...l];n[i]=true;return n;});
+    setTimeout(()=>{
+      const res=runBacktest(nums,currentDraws,prize1);
+      setResults(r=>{const n=[...r];n[i]=res;return n;});
+      setLoading(l=>{const n=[...l];n[i]=false;return n;});
+    },50);
   };
 
-  const runAll = () => [0, 1, 2].forEach(i => {
-    const nums = sets[i].split(/[\s,]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= 45);
-    if (nums.length >= 6) runSet(i);
+  const runAll=()=>[0,1,2].forEach(i=>{
+    const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
+    if(nums.length>=6)runSet(i);
   });
 
-  const switchGame = g => {
-    setGame(g);
-    setSets(["", "", ""]);
-    setResults([null, null, null]);
-    setDateFrom("");
-    setDateTo("");
-  };
+  const switchGame=g=>{setGame(g);setSets(["","",""]);setResults([null,null,null]);};
 
   return (
-    <div style={{ minHeight: "100vh", background: "#070c18", color: "#e2e8f0", fontFamily: "'JetBrains Mono','Fira Code',monospace", "--acc": accent, "--acc-dim": accent + "22" }}>
-      {/* Header */}
-      <div style={{ borderBottom: "1px solid #1e2d44", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{minHeight:"100vh",background:"#070c18",color:"#e2e8f0",fontFamily:"'JetBrains Mono','Fira Code',monospace","--acc":accent,"--acc-dim":accent+"22"}}>
+      <div style={{borderBottom:"1px solid #1e2d44",padding:"16px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div>
-          <div style={{ color: "var(--acc)", fontWeight: 900, fontSize: 19, letterSpacing: 4 }}>LOTTOEDGE</div>
-          <div style={{ color: "#5a6f96", fontSize: 8, letterSpacing: 3 }}>BACKTEST ENGINE</div>
+          <div style={{color:"var(--acc)",fontWeight:900,fontSize:19,letterSpacing:4}}>LOTTOEDGE</div>
+          <div style={{color:"#5a6f96",fontSize:8,letterSpacing:3}}>BACKTEST ENGINE</div>
         </div>
-        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-          <div style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 12 }}>{currentDraws.length.toLocaleString()} DRAWS</div>
-          <div style={{ color: "#5a6f96", fontSize: 8 }}>{dateRange}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {profile?.subscribed
-              ? <span style={{ background: "#00d68f22", border: "1px solid #00d68f", color: "#00d68f", borderRadius: 6, padding: "2px 8px", fontSize: 8, fontWeight: 800, letterSpacing: 1 }}>PREMIUM</span>
-              : <span style={{ color: "#5a6f96", fontSize: 8 }}>trial day {Math.min(daysUsed + 1, TRIAL_DAYS)}/{TRIAL_DAYS}</span>
-            }
-            <button
-              onClick={handleSignOut}
-              style={{ background: "transparent", border: "none", color: "#1e2d44", fontSize: 9, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}
-            >sign out</button>
-          </div>
+        <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+          <div style={{color:"#e2e8f0",fontWeight:700,fontSize:12}}>{currentDraws.length.toLocaleString()} DRAWS</div>
+          <div style={{color:"#5a6f96",fontSize:8}}>{dateRange}</div>
+          <div style={{color:"var(--acc)",fontSize:8}}>{game==="sat"?"PRIZE $5–6M · SAT WEEKLY":"PRIZE $1M · MON/WED/FRI"}</div>
+          <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer" style={{
+            background:"var(--acc)",color:"#070c18",fontWeight:900,fontSize:9,
+            letterSpacing:1.5,padding:"6px 14px",borderRadius:8,textDecoration:"none",
+            marginTop:4,fontFamily:"inherit",
+          }}>🔓 GO PREMIUM · 7 DAYS FREE</a>
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
-        {/* Game selector */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {[
-            { id: "sat", label: "SATURDAY LOTTO", sub: "$5–6M · 1 draw/week" },
-            { id: "mm",  label: "MILLIONAIRE MEDLEY", sub: "$1M · Mon/Wed/Fri" },
-          ].map(g => (
-            <button key={g.id} onClick={() => switchGame(g.id)} style={{
-              flex: 1, padding: "11px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-              background: game === g.id ? "var(--acc-dim)" : "#0f1926",
-              border: `2px solid ${game === g.id ? "var(--acc)" : "#1e2d44"}`,
-              color: game === g.id ? "var(--acc)" : "#5a6f96", transition: "all 0.2s",
+      <div style={{maxWidth:900,margin:"0 auto",padding:"20px 16px"}}>
+        <div style={{display:"flex",gap:8,marginBottom:20}}>
+          {[{id:"sat",label:"SATURDAY LOTTO",sub:"$5–6M · 1 draw/week"},{id:"mm",label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri"}].map(g=>(
+            <button key={g.id} onClick={()=>switchGame(g.id)} style={{
+              flex:1,padding:"11px 14px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",textAlign:"left",
+              background:game===g.id?"var(--acc-dim)":"#0f1926",
+              border:`2px solid ${game===g.id?"var(--acc)":"#1e2d44"}`,
+              color:game===g.id?"var(--acc)":"#5a6f96",transition:"all 0.2s",
             }}>
-              <div style={{ fontWeight: 800, fontSize: 10, letterSpacing: 1.5 }}>{g.label}</div>
-              <div style={{ fontSize: 8, marginTop: 2, opacity: 0.7 }}>{g.sub}</div>
+              <div style={{fontWeight:800,fontSize:10,letterSpacing:1.5}}>{g.label}</div>
+              <div style={{fontSize:8,marginTop:2,opacity:0.7}}>{g.sub}</div>
             </button>
           ))}
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
-          {["backtest", "frequency"].map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              background: "transparent", border: `1px solid ${tab === t ? "var(--acc)" : "#1e2d44"}`,
-              color: tab === t ? "var(--acc)" : "#5a6f96", borderRadius: 8, padding: "6px 16px",
-              fontWeight: 700, fontSize: 9, cursor: "pointer", letterSpacing: 2, fontFamily: "inherit",
+        <div style={{display:"flex",gap:4,marginBottom:20}}>
+          {["backtest","frequency"].map(t=>(
+            <button key={t} onClick={()=>setTab(t)} style={{
+              background:"transparent",border:`1px solid ${tab===t?"var(--acc)":"#1e2d44"}`,
+              color:tab===t?"var(--acc)":"#5a6f96",borderRadius:8,padding:"6px 16px",
+              fontWeight:700,fontSize:9,cursor:"pointer",letterSpacing:2,fontFamily:"inherit",
             }}>{t.toUpperCase()}</button>
           ))}
         </div>
 
-        {/* Data info bar */}
-        <div style={{ background: "#0f1926", border: "1px solid #1e2d44", borderRadius: 10, padding: "10px 16px", marginBottom: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ color: "var(--acc)", fontWeight: 800, fontSize: 9, letterSpacing: 2 }}>DATA</span>
-            <span style={{ color: "#e2e8f0", fontSize: 10 }}>{currentDraws.length.toLocaleString()} draws · {dateRange}</span>
-            <span style={{ color: "#5a6f96", fontSize: 9 }}>· {game === "sat" ? "Full history 1986–2026" : "Full MM history since inception"}</span>
+        <div style={{background:"#0f1926",border:"1px solid #1e2d44",borderRadius:10,padding:"10px 16px",marginBottom:18}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{color:"var(--acc)",fontWeight:800,fontSize:9,letterSpacing:2}}>DATA</span>
+            <span style={{color:"#e2e8f0",fontSize:10}}>{currentDraws.length.toLocaleString()} draws · {dateRange}</span>
+            <span style={{color:"#5a6f96",fontSize:9}}>· {game==="sat"?"Full history 1986–2026":"Full MM history since inception"}</span>
           </div>
         </div>
 
-        {/* Backtest tab */}
-        {tab === "backtest" && (
+        {tab==="backtest"&&(
           <div>
-            <div style={{ color: "#5a6f96", fontSize: 9, letterSpacing: 1.5, textAlign: "center", marginBottom: 16 }}>
+            <div style={{color:"#5a6f96",fontSize:9,letterSpacing:1.5,textAlign:"center",marginBottom:16}}>
               ENTER UP TO 3 SYSTEM SETS · 6–12 NUMBERS · RANGE 1–45
             </div>
-
-            {/* Date range filter */}
-            <div style={{
-              background: "#0f1926", border: "1px solid #1e2d44", borderRadius: 10,
-              padding: "12px 16px", marginBottom: 18,
-              display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10,
-            }}>
-              <span style={{ color: "#5a6f96", fontSize: 9, letterSpacing: 2, flexShrink: 0 }}>DATE RANGE</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flex: 1 }}>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  min={minIso}
-                  max={dateTo || maxIso}
-                  onChange={e => setDateFrom(e.target.value)}
-                  style={{
-                    background: "#070c18", border: "1px solid #1e2d44", color: "#e2e8f0",
-                    borderRadius: 8, padding: "5px 10px", fontSize: 11,
-                    fontFamily: "inherit", outline: "none", colorScheme: "dark",
-                  }}
-                />
-                <span style={{ color: "#1e2d44", fontSize: 10 }}>—</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  min={dateFrom || minIso}
-                  max={maxIso}
-                  onChange={e => setDateTo(e.target.value)}
-                  style={{
-                    background: "#070c18", border: "1px solid #1e2d44", color: "#e2e8f0",
-                    borderRadius: 8, padding: "5px 10px", fontSize: 11,
-                    fontFamily: "inherit", outline: "none", colorScheme: "dark",
-                  }}
-                />
-                {(dateFrom || dateTo) && (
-                  <button
-                    onClick={resetDateFilter}
-                    style={{
-                      background: "#151f30", border: "1px solid #1e2d44", color: "#f87171",
-                      borderRadius: 6, padding: "4px 10px", fontSize: 9,
-                      cursor: "pointer", letterSpacing: 1, fontFamily: "inherit",
-                    }}
-                  >RESET</button>
-                )}
-              </div>
-              <span style={{ color: dateFrom || dateTo ? "var(--acc)" : "#1e2d44", fontSize: 9, flexShrink: 0 }}>
-                {filteredDraws.length.toLocaleString()} / {currentDraws.length.toLocaleString()} draws
-              </span>
-            </div>
-
-            {[0, 1, 2].map(i => (
-              <SetInput
-                key={`${game}-${i}`}
-                label={`SET ${String.fromCharCode(65 + i)}${results[i]?.div1Hits?.length > 0 ? " ★" : ""}`}
-                value={sets[i]}
-                onChange={v => setSets(s => { const n = [...s]; n[i] = v; return n; })}
-                onRun={() => runSet(i)}
-                presets={presets}
-                result={results[i]}
-                loading={loading[i]}
-                label1={label1}
+            {[0,1,2].map(i=>(
+              <SetInput key={`${game}-${i}`}
+                label={`SET ${String.fromCharCode(65+i)}${results[i]?.div1Hits?.length>0?" ★":""}`}
+                value={sets[i]} onChange={v=>setSets(s=>{const n=[...s];n[i]=v;return n;})}
+                onRun={()=>runSet(i)} presets={presets} result={results[i]}
+                loading={loading[i]} label1={label1}
               />
             ))}
-            <div style={{ textAlign: "center", marginTop: 14 }}>
+            <div style={{textAlign:"center",marginTop:14}}>
               <button onClick={runAll} style={{
-                background: "var(--acc)", color: "#070c18", border: "none", borderRadius: 10,
-                padding: "13px 40px", fontWeight: 900, fontSize: 10, cursor: "pointer", letterSpacing: 2, fontFamily: "inherit",
+                background:"var(--acc)",color:"#070c18",border:"none",borderRadius:10,
+                padding:"13px 40px",fontWeight:900,fontSize:10,cursor:"pointer",letterSpacing:2,fontFamily:"inherit",
               }}>▶ RUN ALL SETS</button>
             </div>
           </div>
         )}
 
-        {/* Frequency tab */}
-        {tab === "frequency" && <FrequencyTab draws={currentDraws} />}
+        {tab==="frequency"&&<FrequencyTab draws={currentDraws} />}
 
-        <div style={{ textAlign: "center", marginTop: 40, color: "#1e2d44", fontSize: 8, letterSpacing: 2 }}>
+        <div style={{textAlign:"center",marginTop:40,color:"#1e2d44",fontSize:8,letterSpacing:2}}>
           LOTTOEDGE · SIMULATED DATA · NOT FINANCIAL ADVICE · PRIZE ESTIMATES ONLY
         </div>
       </div>
