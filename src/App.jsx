@@ -15,6 +15,14 @@ function getTrialStatus() {
   return { expired: elapsed >= TRIAL_DAYS, daysLeft };
 }
 
+function parseDMY(str) {
+  const [d,m,y]=str.split("/");
+  return new Date(+y,+m-1,+d);
+}
+function dmyToIso(str) {
+  return str.split("/").reverse().join("-");
+}
+
 function getCombinations(arr, k) {
 
   if (k === 0) return [[]];
@@ -2445,6 +2453,8 @@ export default function App() {
 
   const [trialStatus] = useState(() => getTrialStatus());
   const [showPaywall, setShowPaywall] = useState(false);
+  const [dateFrom,setDateFrom]=useState("");
+  const [dateTo,setDateTo]=useState("");
   const currentDraws=game==="sat"?SAT_DRAWS:MM_DRAWS;
   const prize1=game==="sat"?5000000:1000000;
   const label1=game==="sat"?"SAT LOTTO $5M":"MM $1M";
@@ -2458,7 +2468,7 @@ export default function App() {
     if(nums.length<6)return;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
-      const res=runBacktest(nums,currentDraws,prize1);
+      const res=runBacktest(nums,filteredDraws,prize1);
       setResults(r=>{const n=[...r];n[i]=res;return n;});
       setLoading(l=>{const n=[...l];n[i]=false;return n;});
     },50);
@@ -2469,7 +2479,21 @@ export default function App() {
     if(nums.length>=6)runSet(i);
   });
 
-  const switchGame=g=>{setGame(g);setSets(["","",""]);setResults([null,null,null]);};
+  const minIso=currentDraws.length?dmyToIso(currentDraws[currentDraws.length-1].date):"";
+  const maxIso=currentDraws.length?dmyToIso(currentDraws[0].date):"";
+  const filteredDraws=(()=>{
+    if(!dateFrom&&!dateTo)return currentDraws;
+    const from=dateFrom?new Date(dateFrom):null;
+    const to=dateTo?new Date(dateTo):null;
+    return currentDraws.filter(d=>{
+      const dt=parseDMY(d.date);
+      if(from&&dt<from)return false;
+      if(to&&dt>to)return false;
+      return true;
+    });
+  })();
+  const resetDateFilter=()=>{setDateFrom("");setDateTo("");};
+  const switchGame=g=>{setGame(g);setSets(["","",""]);setResults([null,null,null]);setDateFrom("");setDateTo("");};
 
   return (
     <div style={{minHeight:"100vh",background:"#070c18",color:"#e2e8f0",fontFamily:"'JetBrains Mono','Fira Code',monospace","--acc":accent,"--acc-dim":accent+"22"}}>
@@ -2527,6 +2551,24 @@ export default function App() {
           <div>
             <div style={{color:"#5a6f96",fontSize:9,letterSpacing:1.5,textAlign:"center",marginBottom:16}}>
               ENTER UP TO 3 SYSTEM SETS · 6–12 NUMBERS · RANGE 1–45
+            </div>
+            <div style={{background:"#0f1926",border:"1px solid #1e2d44",borderRadius:10,padding:"10px 16px",marginBottom:18,display:"flex",alignItems:"center",flexWrap:"wrap",gap:10}}>
+              <span style={{color:"#5a6f96",fontSize:9,letterSpacing:2,flexShrink:0}}>DATE RANGE</span>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
+                <input type="date" value={dateFrom} min={minIso} max={dateTo||maxIso}
+                  onChange={e=>setDateFrom(e.target.value)}
+                  style={{background:"#070c18",border:"1px solid #1e2d44",color:"#e2e8f0",borderRadius:8,padding:"5px 10px",fontSize:11,fontFamily:"inherit",outline:"none",colorScheme:"dark"}}
+                />
+                <span style={{color:"#1e2d44",fontSize:10}}>—</span>
+                <input type="date" value={dateTo} min={dateFrom||minIso} max={maxIso}
+                  onChange={e=>setDateTo(e.target.value)}
+                  style={{background:"#070c18",border:"1px solid #1e2d44",color:"#e2e8f0",borderRadius:8,padding:"5px 10px",fontSize:11,fontFamily:"inherit",outline:"none",colorScheme:"dark"}}
+                />
+                {(dateFrom||dateTo)&&(
+                  <button onClick={resetDateFilter} style={{background:"#151f30",border:"1px solid #1e2d44",color:"#f87171",borderRadius:6,padding:"4px 10px",fontSize:9,cursor:"pointer",letterSpacing:1,fontFamily:"inherit"}}>RESET</button>
+                )}
+              </div>
+              <span style={{color:dateFrom||dateTo?"var(--acc)":"#1e2d44",fontSize:9,flexShrink:0}}>{filteredDraws.length.toLocaleString()} / {currentDraws.length.toLocaleString()} draws</span>
             </div>
             {[0,1,2].map(i=>(
               <SetInput key={`${game}-${i}`}
