@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { supabase } from "./supabase.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,16 @@ function runBacktest(numbers, draws) {
   }
   const cost = combos.length * 1.35 * draws.length;
   return { combos: combos.length, divCounts, prize, cost, net: prize - cost, div1Hits };
+}
+
+// Convert DD/MM/YYYY → Date object
+function parseDMY(str) {
+  const [d, m, y] = str.split("/");
+  return new Date(+y, +m - 1, +d);
+}
+// Convert DD/MM/YYYY → YYYY-MM-DD (value for <input type="date">)
+function dmyToIso(str) {
+  return str.split("/").reverse().join("-");
 }
 
 function getFrequency(draws) {
@@ -731,25 +742,229 @@ function CompareTab({ draws }) {
   );
 }
 
+// ── Auth screen ───────────────────────────────────────────────────────────────
+
+function AuthScreen() {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setLoading(true);
+    setError("");
+    const { error: err } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (err) setError(err.message);
+    else setSent(true);
+    setLoading(false);
+  };
+
+  const base = {
+    minHeight: "100vh", background: "#0a0e17", color: "#e2e8f0",
+    fontFamily: "'JetBrains Mono','Fira Code',monospace",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  };
+
+  if (sent) return (
+    <div style={base}>
+      <div style={{ textAlign: "center", maxWidth: 400 }}>
+        <div style={{ color: "#00ffb3", fontWeight: 900, fontSize: 22, letterSpacing: 3, marginBottom: 8 }}>LOTTOEDGE</div>
+        <div style={{ color: "#e2e8f0", fontSize: 15, marginBottom: 8 }}>Check your email</div>
+        <div style={{ color: "#8899bb", fontSize: 12 }}>
+          We sent a magic link to <strong style={{ color: "#e2e8f0" }}>{email}</strong>.<br />
+          Click it to sign in — no password needed.
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={base}>
+      <div style={{ width: "100%", maxWidth: 380, padding: "0 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ color: "#00ffb3", fontWeight: 900, fontSize: 24, letterSpacing: 3 }}>LOTTOEDGE</div>
+          <div style={{ color: "#8899bb", fontSize: 11, letterSpacing: 2, marginTop: 4 }}>SATURDAY LOTTO BACKTEST ENGINE</div>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 12 }}>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              required
+              style={{
+                width: "100%", background: "#111827", border: "1px solid #2a3347",
+                color: "#e2e8f0", borderRadius: 8, padding: "12px 14px",
+                fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box",
+              }}
+            />
+          </div>
+          {error && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 10 }}>{error}</div>}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%", background: loading ? "#1e2533" : "#00ffb3",
+              color: loading ? "#8899bb" : "#0a0e17", border: "none",
+              borderRadius: 8, padding: "13px", fontWeight: 900, fontSize: 13,
+              cursor: loading ? "not-allowed" : "pointer", letterSpacing: 1,
+              fontFamily: "inherit",
+            }}
+          >{loading ? "SENDING..." : "SIGN IN / SIGN UP →"}</button>
+        </form>
+        <div style={{ color: "#2a3347", fontSize: 10, textAlign: "center", marginTop: 20 }}>
+          7-day free trial · No credit card required to start
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Paywall ───────────────────────────────────────────────────────────────────
+
+function Paywall({ daysUsed, email, onSignOut }) {
+  const trialDays = 7;
+  const remaining = Math.max(0, trialDays - daysUsed);
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0e17", color: "#e2e8f0",
+      fontFamily: "'JetBrains Mono','Fira Code',monospace",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{ width: "100%", maxWidth: 420, padding: "0 24px", textAlign: "center" }}>
+        <div style={{ color: "#00ffb3", fontWeight: 900, fontSize: 24, letterSpacing: 3, marginBottom: 6 }}>LOTTOEDGE</div>
+        <div style={{ color: "#8899bb", fontSize: 11, letterSpacing: 2, marginBottom: 32 }}>SATURDAY LOTTO BACKTEST ENGINE</div>
+
+        <div style={{
+          background: "#111827", border: "1px solid #2a3347",
+          borderRadius: 12, padding: "28px 24px", marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+          <div style={{ color: "#f87171", fontWeight: 800, fontSize: 14, letterSpacing: 1, marginBottom: 10 }}>
+            YOUR FREE TRIAL HAS ENDED
+          </div>
+          <div style={{ color: "#8899bb", fontSize: 12, lineHeight: 1.7, marginBottom: 20 }}>
+            You've used <strong style={{ color: "#e2e8f0" }}>{daysUsed} of {trialDays} free days</strong>
+            {remaining === 0 ? "." : ` — ${remaining} day${remaining !== 1 ? "s" : ""} remaining.`}
+            <br />
+            Subscribe to keep access to full draw history,<br />
+            system analysis, and frequency charts.
+          </div>
+          <a
+            href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "block", background: "#00ffb3", color: "#0a0e17",
+              fontWeight: 900, fontSize: 13, letterSpacing: 1.5,
+              padding: "14px 24px", borderRadius: 8, textDecoration: "none",
+              marginBottom: 12,
+            }}
+          >SUBSCRIBE · $7.99 AUD/MONTH →</a>
+          <div style={{ color: "#2a3347", fontSize: 10 }}>
+            Signed in as {email}
+          </div>
+        </div>
+
+        <button
+          onClick={onSignOut}
+          style={{
+            background: "transparent", border: "none", color: "#2a3347",
+            fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+            textDecoration: "underline",
+          }}
+        >sign out</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 
+const TRIAL_DAYS = 7;
+
 export default function App() {
+  // ── auth / subscription state ──────────────────────────────────────────────
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  const loadProfile = useCallback(async (user) => {
+    // Insert only if new user (ignoreDuplicates preserves trial_started_at)
+    await supabase.from("profiles").upsert(
+      { id: user.id, email: user.email },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    setProfile(data ?? null);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      setSession(s);
+      if (s) await loadProfile(s.user);
+      setAuthChecked(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, s) => {
+        setSession(s);
+        if (s) await loadProfile(s.user);
+        else setProfile(null);
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, [loadProfile]);
+
+  const handleSignOut = () => supabase.auth.signOut();
+
+  // ── trial computation (not hooks — safe before or after returns) ──────────
+  const daysUsed = profile
+    ? Math.floor((Date.now() - new Date(profile.trial_started_at).getTime()) / 86_400_000)
+    : 0;
+  const trialExpired = daysUsed >= TRIAL_DAYS;
+
+  // ── app state — ALL hooks must be declared before any early return ─────────
   const [tab, setTab] = useState("backtest");
   const [sets, setSets] = useState(["","",""]);
   const [results, setResults] = useState([null,null,null]);
   const [loading, setLoading] = useState([false,false,false]);
   const [csvDraws, setCsvDraws] = useState(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  // Merge CSV draws with recent draws
   const allDraws = useCallback(() => {
     const recent = RECENT_DRAWS;
     if (!csvDraws) return recent;
-    // CSV is oldest-first after parsing, recent is newest-first
-    // Deduplicate by date
     const recentDates = new Set(recent.map(d => d.date));
     const kaggle = csvDraws.filter(d => !recentDates.has(d.date));
     return [...kaggle, ...recent];
   }, [csvDraws]);
+
+  // ── early returns (after all hooks) ──────────────────────────────────────
+  if (!authChecked) return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0e17", color: "#8899bb",
+      fontFamily: "'JetBrains Mono',monospace",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 12, letterSpacing: 2,
+    }}>LOADING...</div>
+  );
+  if (!session) return <AuthScreen />;
+  if (trialExpired && !profile?.subscribed) {
+    return <Paywall daysUsed={daysUsed} email={profile?.email ?? ""} onSignOut={handleSignOut} />;
+  }
 
   const draws = allDraws();
   const drawCount = draws.length;
@@ -757,12 +972,31 @@ export default function App() {
     ? `${draws[0].date} – ${draws[draws.length-1].date}`
     : "";
 
+  // Date-range bounds derived from loaded draws (newest-first order)
+  const minIso = draws.length ? dmyToIso(draws[draws.length - 1].date) : "";
+  const maxIso = draws.length ? dmyToIso(draws[0].date) : "";
+
+  // Subset of draws used for backtest/compare (full set when no filter)
+  const filteredDraws = (() => {
+    if (!dateFrom && !dateTo) return draws;
+    const from = dateFrom ? new Date(dateFrom) : null;
+    const to   = dateTo   ? new Date(dateTo)   : null;
+    return draws.filter(d => {
+      const dt = parseDMY(d.date);
+      if (from && dt < from) return false;
+      if (to   && dt > to)   return false;
+      return true;
+    });
+  })();
+
+  const resetDateFilter = () => { setDateFrom(""); setDateTo(""); };
+
   const runSet = (i) => {
     const nums = sets[i].split(",").map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
     if (nums.length < 6) return;
     setLoading(l => { const n=[...l]; n[i]=true; return n; });
     setTimeout(() => {
-      const res = runBacktest(nums, draws);
+      const res = runBacktest(nums, filteredDraws);
       setResults(r => { const n=[...r]; n[i]=res; return n; });
       setLoading(l => { const n=[...l]; n[i]=false; return n; });
     }, 50);
@@ -792,9 +1026,19 @@ export default function App() {
           <div style={{ color:"#00ffb3", fontWeight:900, fontSize:22, letterSpacing:3 }}>LOTTOEDGE</div>
           <div style={{ color:"#8899bb", fontSize:11, letterSpacing:2 }}>SATURDAY LOTTO BACKTEST ENGINE</div>
         </div>
-        <div style={{ textAlign:"right" }}>
+        <div style={{ textAlign:"right", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
           <div style={{ color:"#e2e8f0", fontWeight:700, fontSize:14 }}>{drawCount.toLocaleString()} DRAWS LOADED</div>
           <div style={{ color:"#8899bb", fontSize:11 }}>{dateRange}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            {profile?.subscribed
+              ? <span style={{ background:"#00ffb322", border:"1px solid #00ffb3", color:"#00ffb3", borderRadius:6, padding:"2px 8px", fontSize:9, fontWeight:800, letterSpacing:1 }}>PREMIUM</span>
+              : <span style={{ color:"#8899bb", fontSize:9 }}>trial day {Math.min(daysUsed + 1, TRIAL_DAYS)}/{TRIAL_DAYS}</span>
+            }
+            <button
+              onClick={handleSignOut}
+              style={{ background:"transparent", border:"none", color:"#2a3347", fontSize:10, cursor:"pointer", fontFamily:"inherit", textDecoration:"underline" }}
+            >sign out</button>
+          </div>
         </div>
       </div>
 
@@ -828,6 +1072,56 @@ export default function App() {
             <div style={{ color:"#8899bb", fontSize:12, letterSpacing:1, marginBottom:20, textAlign:"center" }}>
               ENTER UP TO 3 SYSTEM SETS · 6–12 NUMBERS · RANGE 1–45
             </div>
+
+            {/* Date range filter bar */}
+            <div style={{
+              background:"#111827", border:"1px solid #1e2d3d", borderRadius:12,
+              padding:"16px 20px", marginBottom:20,
+              display:"flex", alignItems:"center", flexWrap:"wrap", gap:12,
+            }}>
+              <span style={{ color:"#8899bb", fontSize:11, letterSpacing:2, flexShrink:0 }}>DATE RANGE</span>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", flex:1 }}>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  min={minIso}
+                  max={dateTo || maxIso}
+                  onChange={e => setDateFrom(e.target.value)}
+                  style={{
+                    background:"#0d1420", border:"1px solid #2a3347", color:"#e2e8f0",
+                    borderRadius:8, padding:"7px 12px", fontSize:12,
+                    fontFamily:"inherit", outline:"none", colorScheme:"dark",
+                  }}
+                />
+                <span style={{ color:"#2a3347", fontSize:12 }}>—</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || minIso}
+                  max={maxIso}
+                  onChange={e => setDateTo(e.target.value)}
+                  style={{
+                    background:"#0d1420", border:"1px solid #2a3347", color:"#e2e8f0",
+                    borderRadius:8, padding:"7px 12px", fontSize:12,
+                    fontFamily:"inherit", outline:"none", colorScheme:"dark",
+                  }}
+                />
+                {(dateFrom || dateTo) && (
+                  <button
+                    onClick={resetDateFilter}
+                    style={{
+                      background:"#1e2533", border:"1px solid #2a3347", color:"#f87171",
+                      borderRadius:6, padding:"5px 12px", fontSize:11,
+                      cursor:"pointer", letterSpacing:1, fontFamily:"inherit",
+                    }}
+                  >RESET</button>
+                )}
+              </div>
+              <span style={{ color: (dateFrom || dateTo) ? "#00ffb3" : "#2a3347", fontSize:11, flexShrink:0 }}>
+                {filteredDraws.length.toLocaleString()} / {draws.length.toLocaleString()} draws
+              </span>
+            </div>
+
             {[0,1,2].map(i => (
               <SetInput
                 key={i}
