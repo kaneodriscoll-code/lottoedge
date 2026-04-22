@@ -2368,15 +2368,14 @@ function ResultCard({result,label1}) {
   );
 }
 
-function SetInput({label,value,onChange,onRun,presets,result,loading,label1,isPremium}) {
+function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expired}) {
   const [showP,setShowP]=useState(false);
   const numbers=value.split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
-  const isSystem=numbers.length>6;
-  const locked=isSystem&&!isPremium;
+  const locked=numbers.length>6&&expired===true;
   const groups={};
   presets.forEach(p=>{if(!groups[p.group])groups[p.group]=[];groups[p.group].push(p);});
   return (
-    <div style={{background:"#0f1926",border:`1px solid ${locked?"#f5a62355":"#1e2d44"}`,borderRadius:12,padding:"16px 20px",marginBottom:10}}>
+    <div style={{background:"#0f1926",border:`1px solid ${locked?"#f5a62366":"#1e2d44"}`,borderRadius:12,padding:"16px 20px",marginBottom:10}}>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
         <span style={{color:"var(--acc)",fontWeight:800,fontSize:10,letterSpacing:2}}>{label}</span>
         <button onClick={()=>setShowP(p=>!p)} style={{background:"#1e2d44",border:"none",color:"#5a6f96",borderRadius:6,padding:"3px 10px",fontSize:9,cursor:"pointer",letterSpacing:1}}>
@@ -2402,19 +2401,26 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,isPr
       )}
       <div style={{display:"flex",gap:8,marginBottom:8}}>
         <input value={value} onChange={e=>onChange(e.target.value)} placeholder="e.g. 4,24,25,27,31,36,41,42"
-          onKeyDown={e=>e.key==="Enter"&&!locked&&onRun()}
+          onKeyDown={e=>{if(e.key==="Enter"&&!locked)onRun();}}
           style={{flex:1,background:"#0a1020",border:`1px solid ${locked?"#f5a62388":"#1e2d44"}`,color:"#e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace"}}
         />
-        <button onClick={locked?undefined:onRun} disabled={loading||locked} style={{
-          background:locked?"#1e2d44":loading?"#1e2d44":"var(--acc)",
-          color:locked||loading?"#5a6f96":"#070c18",
-          border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
-          cursor:locked||loading?"not-allowed":"pointer",letterSpacing:1.5,fontFamily:"inherit",
-        }}>{loading?"...":"RUN"}</button>
+        {locked?(
+          <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer"
+            style={{background:"#f5a62322",border:"1px solid #f5a62366",color:"#f5a623",borderRadius:8,padding:"9px 14px",fontWeight:800,fontSize:9,cursor:"pointer",letterSpacing:1,fontFamily:"inherit",textDecoration:"none",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+            🔒 UPGRADE
+          </a>
+        ):(
+          <button onClick={onRun} disabled={loading} style={{
+            background:loading?"#1e2d44":"var(--acc)",
+            color:loading?"#5a6f96":"#070c18",
+            border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
+            cursor:loading?"not-allowed":"pointer",letterSpacing:1.5,fontFamily:"inherit",
+          }}>{loading?"...":"RUN"}</button>
+        )}
       </div>
       {locked&&(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"#0a1020",border:"1px solid #f5a62344",borderRadius:8,padding:"10px 14px",marginBottom:8}}>
-          <span style={{color:"#f5a623",fontSize:10,letterSpacing:0.5}}>🔒 System play requires Premium</span>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"#0a1020",border:"1px solid #f5a62333",borderRadius:8,padding:"10px 14px",marginBottom:8}}>
+          <span style={{color:"#f5a623",fontSize:10,letterSpacing:0.5}}>🔒 System play requires Premium — upgrade to unlock</span>
           <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer"
             style={{background:"#f5a623",color:"#070c18",fontWeight:900,fontSize:9,letterSpacing:1,padding:"6px 14px",borderRadius:6,textDecoration:"none",whiteSpace:"nowrap"}}>
             UPGRADE · $7/MONTH
@@ -2478,7 +2484,7 @@ export default function App() {
   const runSet=i=>{
     const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
     if(nums.length<6)return;
-    if(nums.length>6&&trialStatus.expired)return;
+    if(nums.length>6&&trialStatus.expired===true)return;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
       const res=runBacktest(nums,filteredDraws,prize1);
@@ -2489,7 +2495,7 @@ export default function App() {
 
   const runAll=()=>[0,1,2].forEach(i=>{
     const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
-    if(nums.length>=6)runSet(i);
+    if(nums.length>=6&&!(nums.length>6&&trialStatus.expired===true))runSet(i);
   });
 
   const minIso=currentDraws.length?dmyToIso(currentDraws[currentDraws.length-1].date):"";
@@ -2588,7 +2594,7 @@ export default function App() {
                 label={`SET ${String.fromCharCode(65+i)}${results[i]?.div1Hits?.length>0?" ★":""}`}
                 value={sets[i]} onChange={v=>setSets(s=>{const n=[...s];n[i]=v;return n;})}
                 onRun={()=>runSet(i)} presets={presets} result={results[i]}
-                loading={loading[i]} label1={label1} isPremium={!trialStatus.expired}
+                loading={loading[i]} label1={label1} expired={trialStatus.expired}
               />
             ))}
             <div style={{textAlign:"center",marginTop:14}}>
