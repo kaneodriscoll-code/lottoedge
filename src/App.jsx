@@ -2464,7 +2464,7 @@ export default function App() {
   const [results,setResults]=useState([null,null,null]);
   const [loading,setLoading]=useState([false,false,false]);
 
-  const [trialStatus] = useState(() => getTrialStatus());
+  const [trialStatus] = useState(() => ({ ...getTrialStatus(), expired: true })); // TEST: force expired
   const [showPaywall, setShowPaywall] = useState(false);
   const [dateFrom,setDateFrom]=useState("");
   const [dateTo,setDateTo]=useState("");
