@@ -2319,6 +2319,18 @@ const MM_PRESETS = [
   {group:"S10",label:"S10 Best ★★★",nums:"4,5,24,25,27,31,36,39,41,42"},
 ];
 
+const OZ_DRAWS = [];
+const PB_DRAWS = [];
+const OZ_PRESETS = [];
+const PB_PRESETS = [];
+
+const GAMES = {
+  sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026"},
+  mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception"},
+  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"Oz Lotto draw data — coming soon"},
+  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"Powerball draw data — coming soon"},
+};
+
 function NumberBall({n,highlight,size=32}) {
   return (
     <span style={{
@@ -2438,7 +2450,12 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
 function FrequencyTab({draws}) {
   const freq=getFrequency(draws);
   const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
-  const max=sorted[0][1];
+  const max=sorted[0]?.[1]||1;
+  if(!draws.length) return (
+    <div style={{textAlign:"center",padding:"60px 20px",color:"#5a6f96",fontSize:11,letterSpacing:1}}>
+      DRAW DATA COMING SOON
+    </div>
+  );
   return (
     <div>
       <div style={{color:"#5a6f96",fontSize:10,marginBottom:14}}>{draws.length.toLocaleString()} draws analysed</div>
@@ -2474,11 +2491,12 @@ export default function App() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [dateFrom,setDateFrom]=useState("");
   const [dateTo,setDateTo]=useState("");
-  const currentDraws=game==="sat"?SAT_DRAWS:MM_DRAWS;
-  const prize1=game==="sat"?5000000:1000000;
-  const label1=game==="sat"?"SAT LOTTO $5M":"MM $1M";
-  const presets=game==="sat"?SAT_PRESETS:MM_PRESETS;
-  const accent=game==="sat"?"#00d68f":"#f5a623";
+  const gc=GAMES[game]??GAMES.sat;
+  const currentDraws=gc.draws;
+  const prize1=gc.prize;
+  const label1=gc.label1;
+  const presets=gc.presets;
+  const accent=gc.accent;
   const dateRange=currentDraws.length>0?`${currentDraws[currentDraws.length-1].date} – ${currentDraws[0].date}`:"";
 
   const runSet=i=>{
@@ -2524,7 +2542,7 @@ export default function App() {
         <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
           <div style={{color:"#e2e8f0",fontWeight:700,fontSize:12}}>{currentDraws.length.toLocaleString()} DRAWS</div>
           <div style={{color:"#5a6f96",fontSize:8}}>{dateRange}</div>
-          <div style={{color:"var(--acc)",fontSize:8}}>{game==="sat"?"PRIZE $5–6M · SAT WEEKLY":"PRIZE $1M · MON/WED/FRI"}</div>
+          <div style={{color:"var(--acc)",fontSize:8}}>{gc.label1.toUpperCase()}</div>
           <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer" style={{
             background:"var(--acc)",color:"#070c18",fontWeight:900,fontSize:9,
             letterSpacing:1.5,padding:"6px 14px",borderRadius:8,textDecoration:"none",
@@ -2534,13 +2552,13 @@ export default function App() {
       </div>
 
       <div style={{maxWidth:900,margin:"0 auto",padding:"20px 16px"}}>
-        <div style={{display:"flex",gap:8,marginBottom:20}}>
-          {[{id:"sat",label:"SATURDAY LOTTO",sub:"$5–6M · 1 draw/week"},{id:"mm",label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri"}].map(g=>(
-            <button key={g.id} onClick={()=>switchGame(g.id)} style={{
-              flex:1,padding:"11px 14px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",textAlign:"left",
-              background:game===g.id?"var(--acc-dim)":"#0f1926",
-              border:`2px solid ${game===g.id?"var(--acc)":"#1e2d44"}`,
-              color:game===g.id?"var(--acc)":"#5a6f96",transition:"all 0.2s",
+        <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+          {Object.entries(GAMES).map(([id,g])=>(
+            <button key={id} onClick={()=>switchGame(id)} style={{
+              flex:"1 1 140px",padding:"11px 14px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",textAlign:"left",
+              background:game===id?g.accent+"22":"#0f1926",
+              border:`2px solid ${game===id?g.accent:"#1e2d44"}`,
+              color:game===id?g.accent:"#5a6f96",transition:"all 0.2s",
             }}>
               <div style={{fontWeight:800,fontSize:10,letterSpacing:1.5}}>{g.label}</div>
               <div style={{fontSize:8,marginTop:2,opacity:0.7}}>{g.sub}</div>
@@ -2562,15 +2580,21 @@ export default function App() {
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{color:"var(--acc)",fontWeight:800,fontSize:9,letterSpacing:2}}>DATA</span>
             <span style={{color:"#e2e8f0",fontSize:10}}>{currentDraws.length.toLocaleString()} draws · {dateRange}</span>
-            <span style={{color:"#5a6f96",fontSize:9}}>· {game==="sat"?"Full history 1986–2026":"Full MM history since inception"}</span>
+            <span style={{color:"#5a6f96",fontSize:9}}>· {gc.history}</span>
           </div>
         </div>
 
         {tab==="backtest"&&(
           <div>
-            <div style={{color:"#5a6f96",fontSize:9,letterSpacing:1.5,textAlign:"center",marginBottom:16}}>
+            {!currentDraws.length&&(
+              <div style={{textAlign:"center",padding:"60px 20px",color:"#5a6f96",fontSize:11,letterSpacing:1}}>
+                DRAW DATA COMING SOON
+              </div>
+            )}
+            {!!currentDraws.length&&<div style={{color:"#5a6f96",fontSize:9,letterSpacing:1.5,textAlign:"center",marginBottom:16}}>
               ENTER UP TO 3 SYSTEM SETS · 6–12 NUMBERS · RANGE 1–45
-            </div>
+            </div>}
+            {!!currentDraws.length&&<>
             <div style={{background:"#0f1926",border:"1px solid #1e2d44",borderRadius:10,padding:"10px 16px",marginBottom:18,display:"flex",alignItems:"center",flexWrap:"wrap",gap:10}}>
               <span style={{color:"#5a6f96",fontSize:9,letterSpacing:2,flexShrink:0}}>DATE RANGE</span>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flex:1}}>
@@ -2603,6 +2627,7 @@ export default function App() {
                 padding:"13px 40px",fontWeight:900,fontSize:10,cursor:"pointer",letterSpacing:2,fontFamily:"inherit",
               }}>▶ RUN ALL SETS</button>
             </div>
+            </>}
           </div>
         )}
 
