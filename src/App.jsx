@@ -2476,9 +2476,9 @@ export default function App() {
   const dateRange=currentDraws.length>0?`${currentDraws[currentDraws.length-1].date} – ${currentDraws[0].date}`:"";
 
   const runSet=i=>{
-    if(trialStatus.expired){setShowPaywall(true);return;}
     const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
     if(nums.length<6)return;
+    if(nums.length>6&&trialStatus.expired)return;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
       const res=runBacktest(nums,filteredDraws,prize1);
