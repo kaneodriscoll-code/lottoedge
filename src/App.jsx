@@ -3647,7 +3647,7 @@ const PB_PRESETS = [];
 const GAMES = {
   sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026",         minNums:6,maxNums:12,ballRange:45},
   mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception",minNums:6,maxNums:12,ballRange:45},
-  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"Oz Lotto draw data — coming soon", minNums:7,maxNums:12,ballRange:47},
+  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"7-ball format from Oct 2005 · 2005–2026", minNums:7,maxNums:12,ballRange:47,minDate:"18/10/2005"},
   pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"Powerball draw data — coming soon", minNums:7,maxNums:20,ballRange:35},
 };
 
@@ -3812,7 +3812,9 @@ export default function App() {
   const [dateFrom,setDateFrom]=useState("");
   const [dateTo,setDateTo]=useState("");
   const gc=GAMES[game]??GAMES.sat;
-  const currentDraws=gc.draws;
+  const currentDraws=gc.minDate
+    ? gc.draws.filter(d=>parseDMY(d.date)>=parseDMY(gc.minDate))
+    : gc.draws;
   const prize1=gc.prize;
   const label1=gc.label1;
   const presets=gc.presets;
