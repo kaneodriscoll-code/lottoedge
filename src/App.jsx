@@ -4159,16 +4159,15 @@ function ResultCard({result,label1}) {
   );
 }
 
-function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expired,minNums=6,ballRange=45,isPowerball,pbValue="",onPbChange}) {
+function SetInput({label,value,onChange,onRun,presets,result,loading,label1,minNums=6,ballRange=45,isPowerball,pbValue="",onPbChange}) {
   const [showP,setShowP]=useState(false);
   const numbers=value.split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=ballRange);
-  const locked=numbers.length>minNums&&expired===true;
   const pbNum=isPowerball&&pbValue?parseInt(pbValue):null;
   const pbValid=pbNum>=1&&pbNum<=20;
   const groups={};
   presets.forEach(p=>{if(!groups[p.group])groups[p.group]=[];groups[p.group].push(p);});
   return (
-    <div style={{background:"#0f1926",border:`1px solid ${locked?"#f5a62366":"#1e2d44"}`,borderRadius:12,padding:"16px 20px",marginBottom:10}}>
+    <div style={{background:"#0f1926",border:"1px solid #1e2d44",borderRadius:12,padding:"16px 20px",marginBottom:10}}>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
         <span style={{color:"var(--acc)",fontWeight:800,fontSize:10,letterSpacing:2}}>{label}</span>
         <button onClick={()=>setShowP(p=>!p)} style={{background:"#1e2d44",border:"none",color:"#5a6f96",borderRadius:6,padding:"3px 10px",fontSize:9,cursor:"pointer",letterSpacing:1}}>
@@ -4195,56 +4194,40 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
       {isPowerball&&<div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5,marginBottom:4}}>MAIN NUMBERS (1–35)</div>}
       <div style={{display:"flex",gap:8,marginBottom:isPowerball?6:8}}>
         <input value={value} onChange={e=>onChange(e.target.value)} placeholder={isPowerball?"e.g. 3,9,15,22,27,31,35":"e.g. 4,24,25,27,31,36,41,42"}
-          onKeyDown={e=>{if(e.key==="Enter"&&!locked)onRun();}}
-          style={{flex:1,background:"#0a1020",border:`1px solid ${locked?"#f5a62388":"#1e2d44"}`,color:"#e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace"}}
+          onKeyDown={e=>{if(e.key==="Enter")onRun();}}
+          style={{flex:1,background:"#0a1020",border:"1px solid #1e2d44",color:"#e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace"}}
         />
-        {locked?(
-          <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer"
-            style={{background:"#f5a62322",border:"1px solid #f5a62366",color:"#f5a623",borderRadius:8,padding:"9px 14px",fontWeight:800,fontSize:9,cursor:"pointer",letterSpacing:1,fontFamily:"inherit",textDecoration:"none",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
-            🔒 UPGRADE
-          </a>
-        ):(
-          !isPowerball&&<button onClick={onRun} disabled={loading} style={{
-            background:loading?"#1e2d44":"var(--acc)",
-            color:loading?"#5a6f96":"#070c18",
-            border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
-            cursor:loading?"not-allowed":"pointer",letterSpacing:1.5,fontFamily:"inherit",
-          }}>{loading?"...":"RUN"}</button>
-        )}
+        {!isPowerball&&<button onClick={onRun} disabled={loading} style={{
+          background:loading?"#1e2d44":"var(--acc)",
+          color:loading?"#5a6f96":"#070c18",
+          border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
+          cursor:loading?"not-allowed":"pointer",letterSpacing:1.5,fontFamily:"inherit",
+        }}>{loading?"...":"RUN"}</button>}
       </div>
       {isPowerball&&(
         <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
           <div style={{flex:1}}>
             <div style={{color:"#f59e0b",fontSize:8,letterSpacing:1.5,marginBottom:4}}>POWERBALL (optional · 1–20)</div>
             <input value={pbValue} onChange={e=>onPbChange&&onPbChange(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"&&!locked)onRun();}}
+              onKeyDown={e=>{if(e.key==="Enter")onRun();}}
               placeholder="e.g. 7" maxLength={2}
               style={{width:"100%",background:"#0a1020",border:`1px solid ${pbValue&&!pbValid?"#f87171":"#f59e0b44"}`,color:"#f59e0b",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace",boxSizing:"border-box"}}
             />
           </div>
-          {!locked&&<button onClick={onRun} disabled={loading} style={{
+          <button onClick={onRun} disabled={loading} style={{
             background:loading?"#1e2d44":"var(--acc)",
             color:loading?"#5a6f96":"#070c18",
             border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
             cursor:loading?"not-allowed":"pointer",letterSpacing:1.5,fontFamily:"inherit",
             alignSelf:"flex-end",
-          }}>{loading?"...":"RUN"}</button>}
-        </div>
-      )}
-      {locked&&(
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"#0a1020",border:"1px solid #f5a62333",borderRadius:8,padding:"10px 14px",marginBottom:8}}>
-          <span style={{color:"#f5a623",fontSize:10,letterSpacing:0.5}}>🔒 System play requires Premium — upgrade to unlock</span>
-          <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer"
-            style={{background:"#f5a623",color:"#070c18",fontWeight:900,fontSize:9,letterSpacing:1,padding:"6px 14px",borderRadius:6,textDecoration:"none",whiteSpace:"nowrap"}}>
-            UPGRADE · $7/MONTH
-          </a>
+          }}>{loading?"...":"RUN"}</button>
         </div>
       )}
       <div style={{display:"flex",flexWrap:"wrap",alignItems:"center"}}>
         {numbers.map(n=><NumberBall key={n} n={n} highlight />)}
         {isPowerball&&pbValid&&<><span style={{color:"#5a6f96",fontSize:10,margin:"0 4px"}}>+</span><NumberBall n={pbNum} variant="powerball" /></>}
       </div>
-      {result&&!locked&&<ResultCard result={result} label1={label1} />}
+      {result&&<ResultCard result={result} label1={label1} />}
     </div>
   );
 }
@@ -4290,7 +4273,6 @@ export default function App() {
   const [results,setResults]=useState([null,null,null]);
   const [loading,setLoading]=useState([false,false,false]);
 
-  const [trialStatus] = useState(() => ({ ...getTrialStatus(), expired: true })); // TEST: force expired
   const [showPaywall, setShowPaywall] = useState(false);
   const [dateFrom,setDateFrom]=useState("");
   const [dateTo,setDateTo]=useState("");
@@ -4307,7 +4289,6 @@ export default function App() {
   const runSet=i=>{
     const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=gc.ballRange);
     if(nums.length<gc.minNums)return;
-    if(nums.length>gc.minNums&&trialStatus.expired===true)return;
     const userPB=gc.isPowerball?(()=>{const v=parseInt(pbSets[i]);return(!isNaN(v)&&v>=1&&v<=20)?v:null;})():undefined;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
@@ -4319,7 +4300,7 @@ export default function App() {
 
   const runAll=()=>[0,1,2].forEach(i=>{
     const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=gc.ballRange);
-    if(nums.length>=gc.minNums&&!(nums.length>gc.minNums&&trialStatus.expired===true))runSet(i);
+    if(nums.length>=gc.minNums)runSet(i);
   });
 
   const minIso=currentDraws.length?dmyToIso(currentDraws[currentDraws.length-1].date):"";
@@ -4349,11 +4330,6 @@ export default function App() {
           <div style={{color:"#e2e8f0",fontWeight:700,fontSize:12}}>{currentDraws.length.toLocaleString()} DRAWS</div>
           <div style={{color:"#5a6f96",fontSize:8}}>{dateRange}</div>
           <div style={{color:"var(--acc)",fontSize:8}}>{gc.label1.toUpperCase()}</div>
-          <a href="https://buy.stripe.com/00w00j4wXgX1adS0hX6Zy00" target="_blank" rel="noopener noreferrer" style={{
-            background:"var(--acc)",color:"#070c18",fontWeight:900,fontSize:9,
-            letterSpacing:1.5,padding:"6px 14px",borderRadius:8,textDecoration:"none",
-            marginTop:4,fontFamily:"inherit",
-          }}>🔓 GO PREMIUM · 7 DAYS FREE</a>
         </div>
       </div>
 
@@ -4426,7 +4402,7 @@ export default function App() {
                 label={`SET ${String.fromCharCode(65+i)}${results[i]?.div1Hits?.length>0?" ★":""}`}
                 value={sets[i]} onChange={v=>setSets(s=>{const n=[...s];n[i]=v;return n;})}
                 onRun={()=>runSet(i)} presets={presets} result={results[i]}
-                loading={loading[i]} label1={label1} expired={trialStatus.expired}
+                loading={loading[i]} label1={label1}
                 minNums={gc.minNums} ballRange={gc.ballRange}
                 isPowerball={gc.isPowerball}
                 pbValue={pbSets[i]} onPbChange={v=>setPbSets(p=>{const n=[...p];n[i]=v;return n;})}
