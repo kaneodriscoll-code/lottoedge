@@ -4102,9 +4102,10 @@ const GAMES = {
 
 function NumberBall({n,highlight,size=32,variant}) {
   const isPB = variant==="powerball";
-  const bg = isPB ? "#f59e0b" : highlight ? "var(--acc)" : "#151f30";
-  const color = isPB ? "#1a0a00" : highlight ? "#070c18" : "#5a6f96";
-  const border = isPB ? "none" : highlight ? "none" : "1px solid #1e2d44";
+  const isPBMain = variant==="pb-main";
+  const bg = isPB ? "#E8001C" : isPBMain ? "#F5A623" : highlight ? "var(--acc)" : "#151f30";
+  const color = isPB ? "#ffffff" : isPBMain ? "#000000" : highlight ? "#070c18" : "#5a6f96";
+  const border = isPB || isPBMain ? "none" : highlight ? "none" : "1px solid #1e2d44";
   return (
     <span style={{
       display:"inline-flex",alignItems:"center",justifyContent:"center",
@@ -4120,7 +4121,9 @@ function ResultCard({result,label1}) {
   const {combos,divCounts,divCount,mode,prize,cost,net,div1Hits,costPerDraw}=result;
   const numDivs = divCount || 6;
   const isMainOnly = mode==="main-only";
+  const isPBFull = numDivs === 9 && !isMainOnly;
   const mainLabel = {1:"7 MAIN",2:"6 MAIN",3:"5 MAIN",4:"4 MAIN",5:"3 MAIN",6:"2 MAIN"};
+  const pbFullLabel = {1:"7+PB",2:"7 MAIN",3:"6+PB",4:"6 MAIN",5:"5+PB",6:"4+PB",7:"5 MAIN",8:"3+PB",9:"2+PB"};
   return (
     <div style={{background:"#0a1020",border:"1px solid #1e2d44",borderRadius:10,padding:14,marginTop:8}}>
       {isMainOnly&&<div style={{color:"#f59e0b",fontSize:8,letterSpacing:1.5,marginBottom:8}}>MAIN NUMBERS ONLY · ADD POWERBALL FOR FULL ENTRY</div>}
@@ -4131,7 +4134,7 @@ function ResultCard({result,label1}) {
             border:`1px solid ${d===1&&divCounts[1]>0?"var(--acc)":"#1e2d44"}`,
             borderRadius:8,padding:"7px 10px",textAlign:"center",minWidth:46,
           }}>
-            <div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5}}>{isMainOnly?mainLabel[d]:`DIV ${d}`}</div>
+            <div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5}}>{isMainOnly?mainLabel[d]:isPBFull?pbFullLabel[d]:`DIV ${d}`}</div>
             <div style={{color:d===1&&divCounts[1]>0?"var(--acc)":"#e2e8f0",fontWeight:800,fontSize:17}}>{divCounts[d]||0}</div>
           </div>
         ))}
@@ -4196,7 +4199,7 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,minN
       {isPowerball&&<div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5,marginBottom:4}}>MAIN NUMBERS (1–35)</div>}
       <div style={{display:"flex",gap:8,marginBottom:isPowerball?6:8}}>
         <input value={value} onChange={e=>onChange(e.target.value)} placeholder={isPowerball?"e.g. 3,9,15,22,27,31,35":"e.g. 4,24,25,27,31,36,41,42"}
-          onKeyDown={e=>{if(e.key==="Enter")onRun();}}
+          onKeyDown={e=>{if(e.key==="Enter")onRun();}} autoComplete="off"
           style={{flex:1,background:"#0a1020",border:"1px solid #1e2d44",color:"#e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace"}}
         />
         {!isPowerball&&<button onClick={onRun} disabled={loading} style={{
@@ -4211,7 +4214,7 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,minN
           <div style={{flex:1}}>
             <div style={{color:"#f59e0b",fontSize:8,letterSpacing:1.5,marginBottom:4}}>POWERBALL (optional · 1–20)</div>
             <input value={pbValue} onChange={e=>onPbChange&&onPbChange(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter")onRun();}}
+              onKeyDown={e=>{if(e.key==="Enter")onRun();}} autoComplete="off"
               placeholder="e.g. 7" maxLength={2}
               style={{width:"100%",background:"#0a1020",border:`1px solid ${pbValue&&!pbValid?"#f87171":"#f59e0b44"}`,color:"#f59e0b",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace",boxSizing:"border-box"}}
             />
@@ -4226,7 +4229,7 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,minN
         </div>
       )}
       <div style={{display:"flex",flexWrap:"wrap",alignItems:"center"}}>
-        {numbers.map(n=><NumberBall key={n} n={n} highlight />)}
+        {numbers.map(n=><NumberBall key={n} n={n} highlight variant={isPowerball?"pb-main":undefined} />)}
         {isPowerball&&pbValid&&<><span style={{color:"#5a6f96",fontSize:10,margin:"0 4px"}}>+</span><NumberBall n={pbNum} variant="powerball" /></>}
       </div>
       {result&&<ResultCard result={result} label1={label1} />}
