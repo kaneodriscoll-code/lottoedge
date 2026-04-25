@@ -65,7 +65,7 @@ function checkDiv(combo, drawMain, drawSupps, isPowerball, userPB) {
   return 0;
 }
 
-function runBacktest(numbers, draws, prize1, comboSize, isPowerball, userPB) {
+function runBacktest(numbers, draws, prize1, comboSize, isPowerball, userPB, suppLabel) {
   if (!numbers || numbers.length < comboSize) return null;
   const combos = getCombinations(numbers, comboSize);
   const isPBMainOnly = isPowerball && (userPB === null || userPB === undefined);
@@ -88,7 +88,9 @@ function runBacktest(numbers, draws, prize1, comboSize, isPowerball, userPB) {
       divCounts[bestDiv]++;
       prize += prizes[bestDiv] || 0;
       if (bestDiv === 1) {
-        const h = `${draw.date} — ${draw.nums.join(", ")} + PB ${draw.supps[0]}`;
+        const label = suppLabel || "SUPP";
+        const suppStr = isPowerball ? `${draw.supps[0]}` : draw.supps.join(", ");
+        const h = `${draw.date} — ${draw.nums.join(", ")} + ${label} ${suppStr}`;
         if (!div1Hits.includes(h)) div1Hits.push(h);
       }
     }
@@ -4092,10 +4094,10 @@ const OZ_PRESETS = [];
 const PB_PRESETS = [];
 
 const GAMES = {
-  sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026",         minNums:6,maxNums:12,ballRange:45},
-  mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception",minNums:6,maxNums:12,ballRange:45},
-  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"7-ball format from Oct 2005 · 2005–2026", minNums:7,maxNums:12,ballRange:47,minDate:"18/10/2005"},
-  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"7+1 format · Apr 2018–2026", minNums:7,maxNums:12,ballRange:35,isPowerball:true},
+  sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026",         minNums:6,maxNums:12,ballRange:45,suppLabel:"SUPP"},
+  mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception",minNums:6,maxNums:12,ballRange:45,suppLabel:"SUPP"},
+  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"7-ball format from Oct 2005 · 2005–2026", minNums:7,maxNums:12,ballRange:47,minDate:"18/10/2005",suppLabel:"BONUS"},
+  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"7+1 format · Apr 2018–2026", minNums:7,maxNums:12,ballRange:35,isPowerball:true,suppLabel:"PB"},
 };
 
 function NumberBall({n,highlight,size=32,variant}) {
@@ -4292,7 +4294,7 @@ export default function App() {
     const userPB=gc.isPowerball?(()=>{const v=parseInt(pbSets[i]);return(!isNaN(v)&&v>=1&&v<=20)?v:null;})():undefined;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
-      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums,gc.isPowerball,userPB);
+      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums,gc.isPowerball,userPB,gc.suppLabel);
       setResults(r=>{const n=[...r];n[i]=res;return n;});
       setLoading(l=>{const n=[...l];n[i]=false;return n;});
     },50);
