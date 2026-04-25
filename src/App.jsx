@@ -43,9 +43,9 @@ function checkDiv(combo, main, supps) {
   return 0;
 }
 
-function runBacktest(numbers, draws, prize1) {
-  if (!numbers || numbers.length < 6) return null;
-  const combos = getCombinations(numbers, 6);
+function runBacktest(numbers, draws, prize1, comboSize) {
+  if (!numbers || numbers.length < comboSize) return null;
+  const combos = getCombinations(numbers, comboSize);
   const prizes = {1:prize1, 2:prize1===1000000?6000:5000, 3:450, 4:30, 5:15, 6:10};
   const divCounts = {1:0,2:0,3:0,4:0,5:0,6:0};
   let prize=0; const div1Hits=[];
@@ -70,9 +70,9 @@ function runBacktest(numbers, draws, prize1) {
   return { combos:combos.length, divCounts, prize, cost:costPerDraw*draws.length, net:prize-costPerDraw*draws.length, div1Hits, costPerDraw };
 }
 
-function getFrequency(draws) {
+function getFrequency(draws, ballRange=45) {
   const freq = {};
-  for (let i=1;i<=45;i++) freq[i]=0;
+  for (let i=1;i<=ballRange;i++) freq[i]=0;
   for (const draw of draws) for (const n of draw.nums) freq[n]=(freq[n]||0)+1;
   return freq;
 }
@@ -3645,10 +3645,10 @@ const OZ_PRESETS = [];
 const PB_PRESETS = [];
 
 const GAMES = {
-  sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026"},
-  mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception"},
-  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"Oz Lotto draw data — coming soon"},
-  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"Powerball draw data — coming soon"},
+  sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026",         minNums:6,maxNums:12,ballRange:45},
+  mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception",minNums:6,maxNums:12,ballRange:45},
+  oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"Oz Lotto draw data — coming soon", minNums:7,maxNums:12,ballRange:47},
+  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"Powerball draw data — coming soon", minNums:7,maxNums:20,ballRange:35},
 };
 
 function NumberBall({n,highlight,size=32}) {
@@ -3700,10 +3700,10 @@ function ResultCard({result,label1}) {
   );
 }
 
-function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expired}) {
+function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expired,minNums=6,ballRange=45}) {
   const [showP,setShowP]=useState(false);
-  const numbers=value.split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
-  const locked=numbers.length>6&&expired===true;
+  const numbers=value.split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=ballRange);
+  const locked=numbers.length>minNums&&expired===true;
   const groups={};
   presets.forEach(p=>{if(!groups[p.group])groups[p.group]=[];groups[p.group].push(p);});
   return (
@@ -3767,8 +3767,8 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
   );
 }
 
-function FrequencyTab({draws}) {
-  const freq=getFrequency(draws);
+function FrequencyTab({draws, ballRange=45}) {
+  const freq=getFrequency(draws, ballRange);
   const sorted=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
   const max=sorted[0]?.[1]||1;
   if(!draws.length) return (
@@ -3820,20 +3820,20 @@ export default function App() {
   const dateRange=currentDraws.length>0?`${currentDraws[currentDraws.length-1].date} – ${currentDraws[0].date}`:"";
 
   const runSet=i=>{
-    const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
-    if(nums.length<6)return;
-    if(nums.length>6&&trialStatus.expired===true)return;
+    const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=gc.ballRange);
+    if(nums.length<gc.minNums)return;
+    if(nums.length>gc.minNums&&trialStatus.expired===true)return;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
-      const res=runBacktest(nums,filteredDraws,prize1);
+      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums);
       setResults(r=>{const n=[...r];n[i]=res;return n;});
       setLoading(l=>{const n=[...l];n[i]=false;return n;});
     },50);
   };
 
   const runAll=()=>[0,1,2].forEach(i=>{
-    const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=45);
-    if(nums.length>=6&&!(nums.length>6&&trialStatus.expired===true))runSet(i);
+    const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=gc.ballRange);
+    if(nums.length>=gc.minNums&&!(nums.length>gc.minNums&&trialStatus.expired===true))runSet(i);
   });
 
   const minIso=currentDraws.length?dmyToIso(currentDraws[currentDraws.length-1].date):"";
@@ -3912,7 +3912,7 @@ export default function App() {
               </div>
             )}
             {!!currentDraws.length&&<div style={{color:"#5a6f96",fontSize:9,letterSpacing:1.5,textAlign:"center",marginBottom:16}}>
-              ENTER UP TO 3 SYSTEM SETS · 6–12 NUMBERS · RANGE 1–45
+              {`ENTER UP TO 3 SYSTEM SETS · ${gc.minNums}–${gc.maxNums} NUMBERS · RANGE 1–${gc.ballRange}`}
             </div>}
             {!!currentDraws.length&&<>
             <div style={{background:"#0f1926",border:"1px solid #1e2d44",borderRadius:10,padding:"10px 16px",marginBottom:18,display:"flex",alignItems:"center",flexWrap:"wrap",gap:10}}>
@@ -3939,6 +3939,7 @@ export default function App() {
                 value={sets[i]} onChange={v=>setSets(s=>{const n=[...s];n[i]=v;return n;})}
                 onRun={()=>runSet(i)} presets={presets} result={results[i]}
                 loading={loading[i]} label1={label1} expired={trialStatus.expired}
+                minNums={gc.minNums} ballRange={gc.ballRange}
               />
             ))}
             <div style={{textAlign:"center",marginTop:14}}>
@@ -3951,7 +3952,7 @@ export default function App() {
           </div>
         )}
 
-        {tab==="frequency"&&<FrequencyTab draws={currentDraws} />}
+        {tab==="frequency"&&<FrequencyTab draws={currentDraws} ballRange={gc.ballRange} />}
 
         <div style={{textAlign:"center",marginTop:40,color:"#1e2d44",fontSize:8,letterSpacing:2}}>
           LOTTOEDGE · SIMULATED DATA · NOT FINANCIAL ADVICE · PRIZE ESTIMATES ONLY
