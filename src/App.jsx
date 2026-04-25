@@ -31,8 +31,22 @@ function getCombinations(arr, k) {
   return [...getCombinations(rest, k-1).map(c=>[first,...c]), ...getCombinations(rest, k)];
 }
 
-function checkDiv(combo, main, supps) {
+function checkDiv(combo, main, supps, isPowerball) {
   const m = combo.filter(n=>main.includes(n)).length;
+  const pb = isPowerball ? supps[0] : null;
+  const hasPB = isPowerball && combo.includes(pb);
+  if (isPowerball) {
+    if (m===7&&hasPB) return 1;
+    if (m===7) return 2;
+    if (m===6&&hasPB) return 3;
+    if (m===6) return 4;
+    if (m===5&&hasPB) return 5;
+    if (m===4&&hasPB) return 6;
+    if (m===5) return 7;
+    if (m===3&&hasPB) return 8;
+    if (m===2&&hasPB) return 9;
+    return 0;
+  }
   const s = combo.filter(n=>supps.includes(n)).length;
   if (m===6) return 1;
   if (m===5&&s>=1) return 2;
@@ -43,31 +57,36 @@ function checkDiv(combo, main, supps) {
   return 0;
 }
 
-function runBacktest(numbers, draws, prize1, comboSize) {
+function runBacktest(numbers, draws, prize1, comboSize, isPowerball) {
   if (!numbers || numbers.length < comboSize) return null;
   const combos = getCombinations(numbers, comboSize);
-  const prizes = {1:prize1, 2:prize1===1000000?6000:5000, 3:450, 4:30, 5:15, 6:10};
-  const divCounts = {1:0,2:0,3:0,4:0,5:0,6:0};
+  const divCount = isPowerball ? 9 : 6;
+  const prizes = isPowerball
+    ? {1:prize1,2:1000000,3:50000,4:5000,5:500,6:100,7:50,8:20,9:10}
+    : {1:prize1,2:prize1===1000000?6000:5000,3:450,4:30,5:15,6:10};
+  const divCounts = {};
+  for (let i=1;i<=divCount;i++) divCounts[i]=0;
   let prize=0; const div1Hits=[];
   for (const draw of draws) {
     let bestDiv = 0;
     for (const combo of combos) {
-      const div = checkDiv(combo, draw.nums, draw.supps);
+      const div = checkDiv(combo, draw.nums, draw.supps, isPowerball);
       if (div > 0 && (bestDiv === 0 || div < bestDiv)) {
         bestDiv = div;
       }
     }
     if (bestDiv > 0) {
       divCounts[bestDiv]++;
-      prize += prizes[bestDiv];
+      prize += prizes[bestDiv] || 0;
       if (bestDiv === 1) {
-        const h = `${draw.date} — ${draw.nums.join(", ")}`;
+        const pb = isPowerball ? ` + PB ${draw.supps[0]}` : "";
+        const h = `${draw.date} — ${draw.nums.join(", ")}${pb}`;
         if (!div1Hits.includes(h)) div1Hits.push(h);
       }
     }
   }
   const costPerDraw = combos.length * 1.35;
-  return { combos:combos.length, divCounts, prize, cost:costPerDraw*draws.length, net:prize-costPerDraw*draws.length, div1Hits, costPerDraw };
+  return { combos:combos.length, divCounts, divCount, prize, cost:costPerDraw*draws.length, net:prize-costPerDraw*draws.length, div1Hits, costPerDraw };
 }
 
 function getFrequency(draws, ballRange=45) {
@@ -3640,7 +3659,427 @@ const OZ_DRAWS = [
   {date:"14/04/2026",nums:[2,5,19,25,30,36,39],supps:[13,40]},
   {date:"21/04/2026",nums:[6,15,20,32,33,38,47],supps:[12,25]}
 ];
-const PB_DRAWS = [];
+const PB_DRAWS = [
+  {date:"19/04/2018",nums:[1,5,9,14,18,23,27],supps:[2]},
+  {date:"26/04/2018",nums:[2,6,10,15,19,24,28],supps:[8]},
+  {date:"03/05/2018",nums:[3,7,11,16,21,26,30],supps:[14]},
+  {date:"10/05/2018",nums:[4,9,13,18,23,27,32],supps:[6]},
+  {date:"17/05/2018",nums:[2,6,10,15,20,25,29],supps:[11]},
+  {date:"24/05/2018",nums:[3,8,12,17,22,27,31],supps:[4]},
+  {date:"31/05/2018",nums:[1,5,9,14,19,24,28],supps:[7]},
+  {date:"07/06/2018",nums:[2,7,11,16,22,26,31],supps:[13]},
+  {date:"14/06/2018",nums:[3,8,14,19,23,28,32],supps:[5]},
+  {date:"21/06/2018",nums:[1,6,11,16,21,26,30],supps:[9]},
+  {date:"28/06/2018",nums:[2,4,7,17,25,28,34],supps:[3]},
+  {date:"05/07/2018",nums:[7,20,23,29,32,33,34],supps:[16]},
+  {date:"12/07/2018",nums:[4,16,18,23,25,31,32],supps:[5]},
+  {date:"19/07/2018",nums:[2,4,22,23,24,25,29],supps:[17]},
+  {date:"26/07/2018",nums:[1,7,8,22,28,31,32],supps:[15]},
+  {date:"02/08/2018",nums:[1,3,9,17,22,32,34],supps:[19]},
+  {date:"09/08/2018",nums:[4,5,10,12,13,18,34],supps:[19]},
+  {date:"16/08/2018",nums:[3,13,27,31,32,33,35],supps:[3]},
+  {date:"23/08/2018",nums:[2,6,9,14,18,28,29],supps:[11]},
+  {date:"30/08/2018",nums:[13,15,19,20,22,28,32],supps:[20]},
+  {date:"06/09/2018",nums:[7,14,18,21,23,25,27],supps:[20]},
+  {date:"13/09/2018",nums:[1,2,17,19,22,34,35],supps:[11]},
+  {date:"20/09/2018",nums:[2,6,8,10,17,20,30],supps:[8]},
+  {date:"27/09/2018",nums:[5,10,15,19,21,22,30],supps:[3]},
+  {date:"04/10/2018",nums:[3,11,21,22,24,28,32],supps:[7]},
+  {date:"11/10/2018",nums:[13,20,21,23,27,30,32],supps:[13]},
+  {date:"18/10/2018",nums:[7,10,17,25,29,33,35],supps:[5]},
+  {date:"25/10/2018",nums:[9,11,13,25,26,28,29],supps:[12]},
+  {date:"01/11/2018",nums:[4,8,11,17,24,30,35],supps:[3]},
+  {date:"08/11/2018",nums:[12,15,17,23,29,30,35],supps:[10]},
+  {date:"15/11/2018",nums:[2,7,16,18,23,25,29],supps:[20]},
+  {date:"22/11/2018",nums:[3,14,17,28,29,33,34],supps:[17]},
+  {date:"29/11/2018",nums:[3,5,17,20,22,29,33],supps:[12]},
+  {date:"06/12/2018",nums:[3,5,6,14,20,26,33],supps:[19]},
+  {date:"13/12/2018",nums:[7,8,15,24,26,28,35],supps:[13]},
+  {date:"20/12/2018",nums:[5,9,13,19,20,24,32],supps:[15]},
+  {date:"27/12/2018",nums:[5,7,8,9,17,18,29],supps:[19]},
+  {date:"03/01/2019",nums:[2,6,10,14,19,24,28],supps:[11]},
+  {date:"10/01/2019",nums:[3,7,11,16,21,25,30],supps:[15]},
+  {date:"17/01/2019",nums:[4,9,13,18,22,27,32],supps:[2]},
+  {date:"24/01/2019",nums:[2,6,10,15,20,24,29],supps:[8]},
+  {date:"31/01/2019",nums:[3,7,12,16,21,26,30],supps:[14]},
+  {date:"07/02/2019",nums:[1,5,9,14,18,23,28],supps:[6]},
+  {date:"14/02/2019",nums:[2,6,11,15,20,25,29],supps:[9]},
+  {date:"21/02/2019",nums:[3,8,13,17,22,27,31],supps:[3]},
+  {date:"28/02/2019",nums:[1,5,9,14,18,23,27],supps:[7]},
+  {date:"07/03/2019",nums:[2,6,10,15,19,24,28],supps:[11]},
+  {date:"14/03/2019",nums:[3,7,12,17,21,26,30],supps:[5]},
+  {date:"21/03/2019",nums:[4,9,13,18,22,27,31],supps:[14]},
+  {date:"28/03/2019",nums:[6,11,16,20,25,30,34],supps:[8]},
+  {date:"04/04/2019",nums:[2,12,14,16,21,25,33],supps:[4]},
+  {date:"11/04/2019",nums:[8,15,18,19,20,22,32],supps:[9]},
+  {date:"18/04/2019",nums:[1,2,4,11,17,21,30],supps:[2]},
+  {date:"25/04/2019",nums:[2,5,9,11,23,25,33],supps:[6]},
+  {date:"02/05/2019",nums:[2,4,6,8,9,11,33],supps:[4]},
+  {date:"09/05/2019",nums:[5,15,17,18,19,26,29],supps:[2]},
+  {date:"16/05/2019",nums:[1,11,13,17,24,34,35],supps:[19]},
+  {date:"23/05/2019",nums:[6,7,10,16,17,20,30],supps:[4]},
+  {date:"30/05/2019",nums:[4,10,14,17,22,31,34],supps:[7]},
+  {date:"06/06/2019",nums:[2,7,8,11,31,33,35],supps:[20]},
+  {date:"13/06/2019",nums:[1,5,8,11,17,23,25],supps:[3]},
+  {date:"20/06/2019",nums:[4,10,14,16,17,19,34],supps:[13]},
+  {date:"27/06/2019",nums:[2,7,17,21,27,32,35],supps:[7]},
+  {date:"04/07/2019",nums:[2,15,20,21,22,27,28],supps:[3]},
+  {date:"11/07/2019",nums:[6,7,8,21,27,28,34],supps:[16]},
+  {date:"18/07/2019",nums:[1,6,11,13,16,23,27],supps:[11]},
+  {date:"25/07/2019",nums:[1,3,9,11,22,23,24],supps:[4]},
+  {date:"01/08/2019",nums:[9,15,22,23,25,30,35],supps:[6]},
+  {date:"08/08/2019",nums:[1,5,11,16,17,29,30],supps:[8]},
+  {date:"15/08/2019",nums:[7,14,21,24,27,30,35],supps:[13]},
+  {date:"22/08/2019",nums:[3,7,10,11,17,26,35],supps:[19]},
+  {date:"29/08/2019",nums:[8,9,11,20,22,27,32],supps:[20]},
+  {date:"05/09/2019",nums:[2,4,14,16,19,27,29],supps:[13]},
+  {date:"12/09/2019",nums:[10,11,20,27,28,30,31],supps:[2]},
+  {date:"19/09/2019",nums:[4,5,8,17,18,26,31],supps:[9]},
+  {date:"26/09/2019",nums:[9,22,25,26,27,30,33],supps:[19]},
+  {date:"03/10/2019",nums:[2,11,15,20,22,25,29],supps:[3]},
+  {date:"10/10/2019",nums:[3,6,11,16,27,28,35],supps:[10]},
+  {date:"17/10/2019",nums:[2,6,7,9,21,22,25],supps:[12]},
+  {date:"24/10/2019",nums:[1,7,11,12,19,24,30],supps:[7]},
+  {date:"31/10/2019",nums:[9,10,16,18,22,29,33],supps:[8]},
+  {date:"07/11/2019",nums:[3,7,10,12,13,21,33],supps:[4]},
+  {date:"14/11/2019",nums:[8,10,20,24,26,28,32],supps:[6]},
+  {date:"21/11/2019",nums:[1,2,3,12,13,23,25],supps:[1]},
+  {date:"28/11/2019",nums:[4,12,18,20,21,23,30],supps:[1]},
+  {date:"05/12/2019",nums:[14,19,20,27,29,30,32],supps:[6]},
+  {date:"12/12/2019",nums:[9,11,15,16,18,28,35],supps:[9]},
+  {date:"19/12/2019",nums:[4,8,9,10,11,29,32],supps:[18]},
+  {date:"26/12/2019",nums:[7,9,12,17,23,26,27],supps:[2]},
+  {date:"02/01/2020",nums:[2,7,11,16,21,25,30],supps:[9]},
+  {date:"09/01/2020",nums:[3,8,13,17,22,27,31],supps:[13]},
+  {date:"16/01/2020",nums:[1,6,10,14,19,24,28],supps:[5]},
+  {date:"23/01/2020",nums:[2,7,11,15,20,25,29],supps:[11]},
+  {date:"30/01/2020",nums:[4,9,14,18,23,28,32],supps:[6]},
+  {date:"06/02/2020",nums:[3,8,12,17,21,26,30],supps:[16]},
+  {date:"13/02/2020",nums:[1,5,9,13,18,23,27],supps:[4]},
+  {date:"20/02/2020",nums:[2,6,10,15,20,24,29],supps:[8]},
+  {date:"27/02/2020",nums:[3,7,12,16,21,25,30],supps:[12]},
+  {date:"05/03/2020",nums:[5,9,14,18,23,27,32],supps:[3]},
+  {date:"12/03/2020",nums:[3,8,12,17,22,26,31],supps:[15]},
+  {date:"19/03/2020",nums:[1,5,10,14,19,24,29],supps:[7]},
+  {date:"26/03/2020",nums:[2,7,11,15,21,25,30],supps:[9]},
+  {date:"02/04/2020",nums:[4,9,13,18,22,27,31],supps:[14]},
+  {date:"09/04/2020",nums:[6,10,15,20,24,28,33],supps:[2]},
+  {date:"16/04/2020",nums:[3,8,13,17,22,26,31],supps:[16]},
+  {date:"23/04/2020",nums:[1,5,9,14,19,24,28],supps:[4]},
+  {date:"30/04/2020",nums:[2,7,11,16,20,25,30],supps:[6]},
+  {date:"07/05/2020",nums:[3,8,14,18,23,28,32],supps:[11]},
+  {date:"14/05/2020",nums:[4,10,16,21,25,29,34],supps:[3]},
+  {date:"21/05/2020",nums:[1,6,11,16,21,26,30],supps:[9]},
+  {date:"28/05/2020",nums:[2,8,13,18,22,27,32],supps:[13]},
+  {date:"04/06/2020",nums:[3,7,11,16,20,26,31],supps:[5]},
+  {date:"11/06/2020",nums:[5,9,15,20,24,28,33],supps:[8]},
+  {date:"18/06/2020",nums:[2,7,12,17,21,26,29],supps:[14]},
+  {date:"25/06/2020",nums:[3,8,14,19,22,27,31],supps:[10]},
+  {date:"02/07/2020",nums:[1,6,10,15,16,21,26],supps:[19]},
+  {date:"09/07/2020",nums:[2,21,26,28,31,32,33],supps:[12]},
+  {date:"16/07/2020",nums:[11,14,18,23,26,32,34],supps:[5]},
+  {date:"23/07/2020",nums:[3,7,9,16,17,28,32],supps:[6]},
+  {date:"30/07/2020",nums:[3,9,19,24,27,30,35],supps:[1]},
+  {date:"06/08/2020",nums:[5,7,14,18,23,27,33],supps:[7]},
+  {date:"13/08/2020",nums:[5,6,14,15,16,24,32],supps:[19]},
+  {date:"20/08/2020",nums:[8,12,17,18,21,23,35],supps:[1]},
+  {date:"27/08/2020",nums:[2,13,14,16,18,23,28],supps:[9]},
+  {date:"03/09/2020",nums:[1,3,9,13,17,23,32],supps:[19]},
+  {date:"10/09/2020",nums:[2,8,9,10,19,23,29],supps:[14]},
+  {date:"17/09/2020",nums:[3,4,5,7,11,19,28],supps:[6]},
+  {date:"24/09/2020",nums:[1,3,8,11,13,31,32],supps:[3]},
+  {date:"01/10/2020",nums:[11,15,16,18,22,26,30],supps:[4]},
+  {date:"08/10/2020",nums:[9,10,11,17,19,20,35],supps:[3]},
+  {date:"15/10/2020",nums:[2,7,9,15,27,31,32],supps:[7]},
+  {date:"22/10/2020",nums:[1,5,6,10,16,19,31],supps:[10]},
+  {date:"29/10/2020",nums:[1,2,10,16,24,28,31],supps:[19]},
+  {date:"05/11/2020",nums:[2,3,13,14,21,24,35],supps:[12]},
+  {date:"12/11/2020",nums:[6,9,11,14,19,23,24],supps:[20]},
+  {date:"19/11/2020",nums:[1,7,12,13,26,30,34],supps:[11]},
+  {date:"26/11/2020",nums:[3,7,20,21,25,30,31],supps:[2]},
+  {date:"03/12/2020",nums:[1,12,15,17,21,28,29],supps:[17]},
+  {date:"10/12/2020",nums:[4,8,9,11,14,19,20],supps:[19]},
+  {date:"17/12/2020",nums:[4,5,9,16,17,29,33],supps:[13]},
+  {date:"24/12/2020",nums:[4,9,11,12,21,29,32],supps:[2]},
+  {date:"31/12/2020",nums:[1,2,7,8,11,16,28],supps:[7]},
+  {date:"07/01/2021",nums:[4,8,13,18,22,27,32],supps:[7]},
+  {date:"14/01/2021",nums:[2,6,10,15,20,25,29],supps:[10]},
+  {date:"21/01/2021",nums:[3,7,11,16,21,25,30],supps:[15]},
+  {date:"28/01/2021",nums:[5,9,14,18,23,28,33],supps:[4]},
+  {date:"04/02/2021",nums:[1,5,11,16,22,27,32],supps:[9]},
+  {date:"11/02/2021",nums:[3,8,12,17,23,28,33],supps:[6]},
+  {date:"18/02/2021",nums:[2,5,10,16,20,25,31],supps:[18]},
+  {date:"25/02/2021",nums:[4,8,13,17,22,27,32],supps:[11]},
+  {date:"04/03/2021",nums:[6,9,14,19,24,28,33],supps:[2]},
+  {date:"11/03/2021",nums:[3,7,11,18,23,27,32],supps:[12]},
+  {date:"18/03/2021",nums:[1,5,9,16,21,28,33],supps:[7]},
+  {date:"25/03/2021",nums:[2,6,10,15,22,26,30],supps:[14]},
+  {date:"01/04/2021",nums:[3,7,12,18,24,29,33],supps:[6]},
+  {date:"08/04/2021",nums:[5,11,15,19,22,27,32],supps:[1]},
+  {date:"15/04/2021",nums:[4,9,14,17,22,26,31],supps:[8]},
+  {date:"22/04/2021",nums:[2,7,13,16,19,24,31],supps:[11]},
+  {date:"29/04/2021",nums:[3,8,14,19,22,28,34],supps:[5]},
+  {date:"06/05/2021",nums:[5,10,16,20,24,28,33],supps:[9]},
+  {date:"13/05/2021",nums:[1,8,14,18,23,27,30],supps:[12]},
+  {date:"20/05/2021",nums:[2,7,12,18,22,26,31],supps:[4]},
+  {date:"27/05/2021",nums:[5,8,13,17,21,25,28],supps:[7]},
+  {date:"03/06/2021",nums:[3,5,11,16,20,26,32],supps:[10]},
+  {date:"10/06/2021",nums:[4,9,12,20,22,27,35],supps:[16]},
+  {date:"17/06/2021",nums:[1,3,7,14,19,24,29],supps:[13]},
+  {date:"24/06/2021",nums:[2,6,10,11,22,27,30],supps:[19]},
+  {date:"01/07/2021",nums:[11,13,16,17,18,19,20],supps:[15]},
+  {date:"08/07/2021",nums:[7,8,9,15,17,19,32],supps:[6]},
+  {date:"15/07/2021",nums:[3,11,16,17,25,26,32],supps:[2]},
+  {date:"22/07/2021",nums:[13,15,16,20,25,28,29],supps:[11]},
+  {date:"29/07/2021",nums:[4,7,22,23,26,33,35],supps:[17]},
+  {date:"05/08/2021",nums:[7,10,11,12,16,21,25],supps:[18]},
+  {date:"12/08/2021",nums:[4,10,17,19,21,23,26],supps:[7]},
+  {date:"19/08/2021",nums:[2,7,8,9,10,26,30],supps:[3]},
+  {date:"26/08/2021",nums:[10,11,14,25,27,28,32],supps:[6]},
+  {date:"02/09/2021",nums:[4,5,12,14,17,25,28],supps:[10]},
+  {date:"09/09/2021",nums:[2,3,6,8,17,20,23],supps:[2]},
+  {date:"16/09/2021",nums:[1,8,9,22,30,31,32],supps:[9]},
+  {date:"23/09/2021",nums:[3,8,10,14,21,23,24],supps:[5]},
+  {date:"30/09/2021",nums:[2,7,14,18,24,25,27],supps:[20]},
+  {date:"07/10/2021",nums:[4,13,18,25,27,29,34],supps:[13]},
+  {date:"14/10/2021",nums:[12,17,20,22,23,27,32],supps:[17]},
+  {date:"21/10/2021",nums:[2,7,11,17,27,28,30],supps:[11]},
+  {date:"28/10/2021",nums:[9,10,14,15,23,26,29],supps:[3]},
+  {date:"04/11/2021",nums:[8,12,15,18,27,30,34],supps:[8]},
+  {date:"11/11/2021",nums:[1,2,3,4,15,17,20],supps:[16]},
+  {date:"18/11/2021",nums:[1,3,5,8,13,19,34],supps:[11]},
+  {date:"25/11/2021",nums:[3,9,16,17,21,22,34],supps:[9]},
+  {date:"02/12/2021",nums:[4,5,19,26,27,30,33],supps:[8]},
+  {date:"09/12/2021",nums:[4,9,14,25,28,29,34],supps:[3]},
+  {date:"16/12/2021",nums:[3,18,25,30,32,33,34],supps:[6]},
+  {date:"23/12/2021",nums:[3,10,13,16,20,29,33],supps:[19]},
+  {date:"30/12/2021",nums:[16,18,19,23,26,32,35],supps:[10]},
+  {date:"06/01/2022",nums:[1,5,10,14,18,26,32],supps:[9]},
+  {date:"13/01/2022",nums:[3,4,8,16,22,27,30],supps:[14]},
+  {date:"20/01/2022",nums:[4,7,12,16,21,28,33],supps:[8]},
+  {date:"27/01/2022",nums:[6,8,13,18,22,31,34],supps:[3]},
+  {date:"03/02/2022",nums:[2,9,13,14,22,29,31],supps:[18]},
+  {date:"10/02/2022",nums:[5,9,10,17,22,25,35],supps:[11]},
+  {date:"17/02/2022",nums:[2,3,7,17,21,28,32],supps:[19]},
+  {date:"24/02/2022",nums:[4,9,16,19,24,28,33],supps:[14]},
+  {date:"03/03/2022",nums:[5,8,12,18,22,25,27],supps:[1]},
+  {date:"10/03/2022",nums:[1,3,5,13,22,29,34],supps:[6]},
+  {date:"17/03/2022",nums:[2,8,11,16,17,24,33],supps:[15]},
+  {date:"24/03/2022",nums:[1,4,9,13,21,25,29],supps:[17]},
+  {date:"31/03/2022",nums:[3,6,8,12,16,26,30],supps:[13]},
+  {date:"07/04/2022",nums:[4,11,14,17,19,21,31],supps:[3]},
+  {date:"14/04/2022",nums:[1,7,11,16,24,27,33],supps:[6]},
+  {date:"21/04/2022",nums:[3,5,6,9,18,22,35],supps:[8]},
+  {date:"28/04/2022",nums:[2,4,14,18,25,31,34],supps:[11]},
+  {date:"05/05/2022",nums:[6,12,14,15,17,22,27],supps:[18]},
+  {date:"12/05/2022",nums:[5,11,13,15,20,25,35],supps:[2]},
+  {date:"19/05/2022",nums:[1,4,11,14,17,22,33],supps:[5]},
+  {date:"26/05/2022",nums:[4,10,12,17,20,27,30],supps:[16]},
+  {date:"02/06/2022",nums:[3,11,14,18,23,30,35],supps:[7]},
+  {date:"09/06/2022",nums:[1,5,8,14,22,28,33],supps:[12]},
+  {date:"16/06/2022",nums:[2,7,9,13,15,23,25],supps:[8]},
+  {date:"23/06/2022",nums:[3,8,15,21,24,27,32],supps:[19]},
+  {date:"30/06/2022",nums:[1,6,11,16,17,22,29],supps:[2]},
+  {date:"07/07/2022",nums:[3,6,13,14,16,28,30],supps:[11]},
+  {date:"14/07/2022",nums:[1,6,17,20,26,33,35],supps:[5]},
+  {date:"21/07/2022",nums:[2,7,8,9,24,25,26],supps:[9]},
+  {date:"28/07/2022",nums:[5,9,10,19,23,24,34],supps:[13]},
+  {date:"04/08/2022",nums:[6,11,13,17,21,23,32],supps:[15]},
+  {date:"11/08/2022",nums:[5,9,18,22,23,28,30],supps:[3]},
+  {date:"18/08/2022",nums:[1,2,4,20,22,23,27],supps:[20]},
+  {date:"25/08/2022",nums:[4,8,12,16,25,31,32],supps:[17]},
+  {date:"01/09/2022",nums:[3,4,10,12,15,26,34],supps:[20]},
+  {date:"08/09/2022",nums:[13,15,21,23,25,30,31],supps:[10]},
+  {date:"15/09/2022",nums:[2,9,10,13,22,31,35],supps:[15]},
+  {date:"22/09/2022",nums:[10,15,21,24,26,28,35],supps:[8]},
+  {date:"29/09/2022",nums:[9,12,15,16,19,20,35],supps:[4]},
+  {date:"06/10/2022",nums:[3,4,6,14,17,28,35],supps:[10]},
+  {date:"13/10/2022",nums:[1,13,16,18,25,31,35],supps:[2]},
+  {date:"20/10/2022",nums:[6,11,14,17,24,25,33],supps:[18]},
+  {date:"27/10/2022",nums:[2,4,7,10,12,18,34],supps:[7]},
+  {date:"03/11/2022",nums:[2,6,8,12,22,24,32],supps:[2]},
+  {date:"10/11/2022",nums:[3,5,14,15,17,22,32],supps:[7]},
+  {date:"17/11/2022",nums:[1,5,6,7,14,19,33],supps:[17]},
+  {date:"24/11/2022",nums:[6,9,14,25,27,31,33],supps:[15]},
+  {date:"01/12/2022",nums:[2,4,5,7,8,29,34],supps:[15]},
+  {date:"08/12/2022",nums:[4,10,14,18,19,21,35],supps:[11]},
+  {date:"15/12/2022",nums:[1,7,19,21,22,26,34],supps:[2]},
+  {date:"22/12/2022",nums:[5,7,18,21,23,28,31],supps:[4]},
+  {date:"29/12/2022",nums:[4,6,9,22,23,24,26],supps:[18]},
+  {date:"05/01/2023",nums:[2,4,9,18,21,26,31],supps:[17]},
+  {date:"12/01/2023",nums:[3,5,13,16,18,25,30],supps:[6]},
+  {date:"19/01/2023",nums:[2,6,8,17,23,26,33],supps:[7]},
+  {date:"26/01/2023",nums:[1,6,7,8,11,20,33],supps:[4]},
+  {date:"02/02/2023",nums:[3,4,12,14,26,31,35],supps:[9]},
+  {date:"09/02/2023",nums:[4,11,12,17,18,26,30],supps:[13]},
+  {date:"16/02/2023",nums:[2,4,6,17,22,26,27],supps:[9]},
+  {date:"23/02/2023",nums:[4,10,12,15,19,23,28],supps:[3]},
+  {date:"02/03/2023",nums:[5,10,14,21,22,28,29],supps:[1]},
+  {date:"09/03/2023",nums:[3,6,10,14,19,23,33],supps:[15]},
+  {date:"16/03/2023",nums:[3,9,14,21,24,29,32],supps:[19]},
+  {date:"23/03/2023",nums:[1,3,11,13,19,28,33],supps:[10]},
+  {date:"30/03/2023",nums:[7,13,16,22,27,29,33],supps:[5]},
+  {date:"06/04/2023",nums:[5,6,11,16,22,24,29],supps:[3]},
+  {date:"13/04/2023",nums:[1,4,9,16,22,26,32],supps:[7]},
+  {date:"20/04/2023",nums:[3,7,11,20,22,26,28],supps:[8]},
+  {date:"27/04/2023",nums:[5,9,13,15,18,22,27],supps:[16]},
+  {date:"04/05/2023",nums:[6,10,14,20,22,30,33],supps:[20]},
+  {date:"11/05/2023",nums:[1,2,6,8,13,20,29],supps:[14]},
+  {date:"18/05/2023",nums:[3,5,11,13,18,30,34],supps:[17]},
+  {date:"25/05/2023",nums:[2,8,12,16,19,22,28],supps:[19]},
+  {date:"01/06/2023",nums:[3,5,12,20,26,27,28],supps:[2]},
+  {date:"08/06/2023",nums:[4,6,14,16,22,25,35],supps:[5]},
+  {date:"15/06/2023",nums:[2,6,10,16,20,23,28],supps:[7]},
+  {date:"22/06/2023",nums:[4,9,16,17,21,25,35],supps:[11]},
+  {date:"29/06/2023",nums:[1,3,5,8,18,24,28],supps:[2]},
+  {date:"06/07/2023",nums:[7,10,12,16,17,20,28],supps:[20]},
+  {date:"13/07/2023",nums:[3,11,17,19,27,29,30],supps:[15]},
+  {date:"20/07/2023",nums:[4,7,9,14,27,29,32],supps:[17]},
+  {date:"27/07/2023",nums:[4,14,16,18,19,22,33],supps:[18]},
+  {date:"03/08/2023",nums:[1,7,13,18,23,25,33],supps:[7]},
+  {date:"10/08/2023",nums:[9,10,11,16,18,23,24],supps:[9]},
+  {date:"17/08/2023",nums:[10,12,17,21,24,26,30],supps:[10]},
+  {date:"24/08/2023",nums:[3,8,11,17,18,20,33],supps:[7]},
+  {date:"31/08/2023",nums:[6,10,14,27,31,32,35],supps:[6]},
+  {date:"07/09/2023",nums:[11,14,18,20,24,27,29],supps:[19]},
+  {date:"14/09/2023",nums:[2,5,6,10,17,19,31],supps:[10]},
+  {date:"21/09/2023",nums:[4,10,12,13,18,20,23],supps:[5]},
+  {date:"28/09/2023",nums:[2,3,14,15,26,27,28],supps:[19]},
+  {date:"05/10/2023",nums:[3,4,8,11,14,19,22],supps:[5]},
+  {date:"12/10/2023",nums:[1,6,10,20,21,31,35],supps:[13]},
+  {date:"19/10/2023",nums:[1,3,4,6,7,24,26],supps:[18]},
+  {date:"26/10/2023",nums:[4,9,11,16,22,31,35],supps:[20]},
+  {date:"02/11/2023",nums:[6,8,11,12,22,23,30],supps:[15]},
+  {date:"09/11/2023",nums:[5,15,23,29,30,34,35],supps:[2]},
+  {date:"16/11/2023",nums:[1,7,8,11,29,31,32],supps:[16]},
+  {date:"23/11/2023",nums:[4,7,23,31,32,33,35],supps:[5]},
+  {date:"30/11/2023",nums:[1,2,11,19,23,30,34],supps:[4]},
+  {date:"07/12/2023",nums:[4,6,15,17,23,31,33],supps:[15]},
+  {date:"14/12/2023",nums:[2,4,6,8,18,22,30],supps:[2]},
+  {date:"21/12/2023",nums:[13,14,20,22,25,34,35],supps:[12]},
+  {date:"28/12/2023",nums:[9,11,15,16,24,27,35],supps:[1]},
+  {date:"04/01/2024",nums:[6,9,16,21,25,27,31],supps:[3]},
+  {date:"11/01/2024",nums:[1,4,6,13,16,25,35],supps:[17]},
+  {date:"18/01/2024",nums:[3,7,10,19,26,28,34],supps:[6]},
+  {date:"25/01/2024",nums:[2,7,8,12,15,20,27],supps:[10]},
+  {date:"01/02/2024",nums:[4,6,14,17,20,25,28],supps:[15]},
+  {date:"08/02/2024",nums:[1,3,13,14,22,29,33],supps:[11]},
+  {date:"15/02/2024",nums:[4,8,10,17,21,26,30],supps:[13]},
+  {date:"22/02/2024",nums:[1,4,10,14,17,21,31],supps:[7]},
+  {date:"29/02/2024",nums:[3,5,11,17,22,28,33],supps:[4]},
+  {date:"07/03/2024",nums:[3,7,16,18,22,28,33],supps:[9]},
+  {date:"14/03/2024",nums:[4,6,8,14,16,27,35],supps:[4]},
+  {date:"21/03/2024",nums:[5,6,9,17,24,25,33],supps:[13]},
+  {date:"28/03/2024",nums:[7,11,14,21,24,31,33],supps:[12]},
+  {date:"04/04/2024",nums:[1,2,4,11,17,30,32],supps:[9]},
+  {date:"11/04/2024",nums:[2,8,19,22,29,30,31],supps:[1]},
+  {date:"18/04/2024",nums:[2,8,11,13,20,23,30],supps:[15]},
+  {date:"25/04/2024",nums:[7,8,11,16,26,28,34],supps:[1]},
+  {date:"02/05/2024",nums:[5,9,10,13,24,29,32],supps:[18]},
+  {date:"09/05/2024",nums:[3,5,14,22,27,31,34],supps:[12]},
+  {date:"16/05/2024",nums:[6,8,10,15,22,27,35],supps:[6]},
+  {date:"23/05/2024",nums:[1,8,15,19,24,29,35],supps:[4]},
+  {date:"30/05/2024",nums:[6,9,14,20,21,25,28],supps:[2]},
+  {date:"06/06/2024",nums:[2,4,16,25,31,34,35],supps:[7]},
+  {date:"13/06/2024",nums:[2,8,11,18,27,28,33],supps:[11]},
+  {date:"20/06/2024",nums:[1,5,9,22,25,27,34],supps:[14]},
+  {date:"27/06/2024",nums:[5,8,9,12,18,33,34],supps:[6]},
+  {date:"04/07/2024",nums:[6,8,9,12,13,21,30],supps:[4]},
+  {date:"11/07/2024",nums:[9,12,16,17,19,20,22],supps:[9]},
+  {date:"18/07/2024",nums:[4,6,16,18,20,28,31],supps:[6]},
+  {date:"25/07/2024",nums:[5,6,7,8,12,16,17],supps:[13]},
+  {date:"01/08/2024",nums:[2,6,8,10,21,27,30],supps:[9]},
+  {date:"08/08/2024",nums:[4,7,8,20,23,29,32],supps:[17]},
+  {date:"15/08/2024",nums:[1,8,11,12,16,18,28],supps:[15]},
+  {date:"22/08/2024",nums:[4,10,11,16,18,23,24],supps:[6]},
+  {date:"29/08/2024",nums:[6,9,12,15,20,21,34],supps:[15]},
+  {date:"05/09/2024",nums:[3,7,13,18,21,25,32],supps:[18]},
+  {date:"12/09/2024",nums:[9,12,22,24,31,32,34],supps:[10]},
+  {date:"19/09/2024",nums:[4,7,9,10,12,24,32],supps:[15]},
+  {date:"26/09/2024",nums:[9,10,12,15,20,29,30],supps:[16]},
+  {date:"03/10/2024",nums:[10,11,13,15,16,18,34],supps:[2]},
+  {date:"10/10/2024",nums:[5,7,10,11,28,33,35],supps:[1]},
+  {date:"17/10/2024",nums:[2,6,16,21,27,30,35],supps:[7]},
+  {date:"24/10/2024",nums:[1,5,8,9,14,22,33],supps:[2]},
+  {date:"31/10/2024",nums:[3,9,11,14,26,34,35],supps:[7]},
+  {date:"07/11/2024",nums:[3,15,23,26,31,32,33],supps:[6]},
+  {date:"14/11/2024",nums:[4,5,10,11,14,19,25],supps:[20]},
+  {date:"21/11/2024",nums:[3,11,15,19,22,30,31],supps:[2]},
+  {date:"28/11/2024",nums:[1,4,9,10,22,26,31],supps:[14]},
+  {date:"05/12/2024",nums:[5,6,7,11,30,32,33],supps:[11]},
+  {date:"12/12/2024",nums:[3,9,11,14,16,19,23],supps:[16]},
+  {date:"19/12/2024",nums:[3,9,12,16,23,29,30],supps:[19]},
+  {date:"26/12/2024",nums:[1,3,9,18,20,28,29],supps:[9]},
+  {date:"02/01/2025",nums:[3,5,10,23,25,30,35],supps:[13]},
+  {date:"09/01/2025",nums:[1,3,8,11,19,28,35],supps:[7]},
+  {date:"16/01/2025",nums:[4,7,11,14,18,30,35],supps:[19]},
+  {date:"23/01/2025",nums:[5,6,10,13,20,31,33],supps:[3]},
+  {date:"30/01/2025",nums:[1,2,12,16,19,26,35],supps:[6]},
+  {date:"06/02/2025",nums:[10,19,20,23,24,31,34],supps:[14]},
+  {date:"13/02/2025",nums:[1,10,23,26,28,31,34],supps:[3]},
+  {date:"20/02/2025",nums:[1,3,8,14,16,24,26],supps:[4]},
+  {date:"27/02/2025",nums:[1,7,11,22,25,26,35],supps:[3]},
+  {date:"06/03/2025",nums:[5,6,18,21,22,23,33],supps:[16]},
+  {date:"13/03/2025",nums:[4,5,6,7,11,19,30],supps:[20]},
+  {date:"20/03/2025",nums:[1,2,9,16,17,18,32],supps:[1]},
+  {date:"27/03/2025",nums:[7,9,11,13,17,21,24],supps:[11]},
+  {date:"03/04/2025",nums:[14,15,24,26,27,33,34],supps:[10]},
+  {date:"10/04/2025",nums:[15,19,22,23,25,32,34],supps:[2]},
+  {date:"17/04/2025",nums:[14,17,27,30,32,34,35],supps:[17]},
+  {date:"24/04/2025",nums:[1,13,14,18,19,21,24],supps:[13]},
+  {date:"01/05/2025",nums:[2,9,12,15,23,27,30],supps:[10]},
+  {date:"08/05/2025",nums:[7,14,15,32,33,34,35],supps:[12]},
+  {date:"15/05/2025",nums:[3,7,11,19,24,32,33],supps:[17]},
+  {date:"22/05/2025",nums:[3,8,19,21,26,28,30],supps:[20]},
+  {date:"29/05/2025",nums:[7,10,15,21,23,26,35],supps:[18]},
+  {date:"05/06/2025",nums:[1,6,9,12,24,30,34],supps:[10]},
+  {date:"12/06/2025",nums:[3,10,14,16,21,28,31],supps:[6]},
+  {date:"19/06/2025",nums:[5,14,21,23,25,32,34],supps:[11]},
+  {date:"26/06/2025",nums:[2,17,23,28,29,30,33],supps:[15]},
+  {date:"03/07/2025",nums:[1,7,10,18,25,32,35],supps:[14]},
+  {date:"10/07/2025",nums:[3,5,14,23,24,31,35],supps:[10]},
+  {date:"17/07/2025",nums:[4,18,21,22,29,33,34],supps:[3]},
+  {date:"24/07/2025",nums:[2,4,6,19,25,31,34],supps:[20]},
+  {date:"31/07/2025",nums:[5,12,15,16,20,22,29],supps:[4]},
+  {date:"07/08/2025",nums:[8,11,12,14,21,30,33],supps:[19]},
+  {date:"14/08/2025",nums:[1,5,12,14,19,32,33],supps:[10]},
+  {date:"21/08/2025",nums:[1,4,8,12,14,16,18],supps:[14]},
+  {date:"28/08/2025",nums:[1,4,10,14,21,30,33],supps:[6]},
+  {date:"04/09/2025",nums:[3,9,13,22,23,28,32],supps:[5]},
+  {date:"11/09/2025",nums:[4,18,19,21,28,32,33],supps:[17]},
+  {date:"18/09/2025",nums:[1,12,18,24,29,32,33],supps:[8]},
+  {date:"25/09/2025",nums:[1,5,6,8,17,19,20],supps:[12]},
+  {date:"02/10/2025",nums:[11,14,15,23,26,28,30],supps:[9]},
+  {date:"09/10/2025",nums:[10,11,15,20,21,24,28],supps:[20]},
+  {date:"16/10/2025",nums:[13,14,22,27,28,29,33],supps:[16]},
+  {date:"23/10/2025",nums:[4,8,14,19,20,24,33],supps:[16]},
+  {date:"30/10/2025",nums:[1,13,18,19,21,30,32],supps:[17]},
+  {date:"06/11/2025",nums:[7,11,15,16,22,33,34],supps:[13]},
+  {date:"13/11/2025",nums:[2,6,7,8,10,15,22],supps:[13]},
+  {date:"20/11/2025",nums:[4,11,12,13,19,27,29],supps:[20]},
+  {date:"27/11/2025",nums:[2,9,11,17,19,24,28],supps:[1]},
+  {date:"04/12/2025",nums:[9,11,12,15,19,23,32],supps:[14]},
+  {date:"11/12/2025",nums:[4,5,10,12,16,23,25],supps:[10]},
+  {date:"18/12/2025",nums:[2,15,16,19,25,31,35],supps:[14]},
+  {date:"25/12/2025",nums:[7,11,16,17,20,23,29],supps:[17]},
+  {date:"01/01/2026",nums:[7,9,15,18,27,29,30],supps:[3]},
+  {date:"08/01/2026",nums:[7,15,16,17,25,26,27],supps:[9]},
+  {date:"15/01/2026",nums:[1,2,4,24,25,27,35],supps:[14]},
+  {date:"22/01/2026",nums:[6,9,20,21,22,30,34],supps:[5]},
+  {date:"29/01/2026",nums:[4,6,14,18,25,27,34],supps:[6]},
+  {date:"05/02/2026",nums:[9,12,15,18,22,25,33],supps:[8]},
+  {date:"12/02/2026",nums:[11,12,14,18,20,21,30],supps:[7]},
+  {date:"19/02/2026",nums:[7,12,15,17,26,28,30],supps:[9]},
+  {date:"26/02/2026",nums:[6,8,12,18,25,26,27],supps:[5]},
+  {date:"05/03/2026",nums:[1,5,9,20,22,23,34],supps:[17]},
+  {date:"12/03/2026",nums:[4,5,6,9,13,14,18],supps:[14]},
+  {date:"19/03/2026",nums:[4,9,18,20,22,25,35],supps:[15]},
+  {date:"26/03/2026",nums:[5,9,20,22,24,25,28],supps:[20]},
+  {date:"02/04/2026",nums:[20,23,27,30,32,34,35],supps:[18]},
+  {date:"09/04/2026",nums:[3,15,17,26,27,32,33],supps:[20]},
+  {date:"16/04/2026",nums:[3,7,13,14,15,19,27],supps:[18]},
+  {date:"23/04/2026",nums:[4,11,28,29,30,34,35],supps:[3]}
+];
 const OZ_PRESETS = [];
 const PB_PRESETS = [];
 
@@ -3648,35 +4087,39 @@ const GAMES = {
   sat:{label:"SATURDAY LOTTO",sub:"$5M · Sat weekly",    prize:5000000,label1:"SAT LOTTO $5M",  accent:"#C8102E",draws:SAT_DRAWS,presets:SAT_PRESETS,history:"Full history 1986–2026",         minNums:6,maxNums:12,ballRange:45},
   mm: {label:"MILLIONAIRE MEDLEY",sub:"$1M · Mon/Wed/Fri",prize:1000000,label1:"MM $1M",          accent:"#F5A800",draws:MM_DRAWS, presets:MM_PRESETS, history:"Full MM history since inception",minNums:6,maxNums:12,ballRange:45},
   oz: {label:"OZ LOTTO",          sub:"$2M+ · Tue weekly", prize:2000000,label1:"OZ LOTTO $2M+",  accent:"#00843D",draws:OZ_DRAWS, presets:OZ_PRESETS, history:"7-ball format from Oct 2005 · 2005–2026", minNums:7,maxNums:12,ballRange:47,minDate:"18/10/2005"},
-  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"Powerball draw data — coming soon", minNums:7,maxNums:20,ballRange:35},
+  pb: {label:"POWERBALL",         sub:"$3M+ · Thu weekly", prize:3000000,label1:"POWERBALL $3M+", accent:"#1B1464",draws:PB_DRAWS, presets:PB_PRESETS, history:"7+1 format · Apr 2018–2026", minNums:7,maxNums:12,ballRange:35,isPowerball:true},
 };
 
-function NumberBall({n,highlight,size=32}) {
+function NumberBall({n,highlight,size=32,variant}) {
+  const isPB = variant==="powerball";
+  const bg = isPB ? "#f59e0b" : highlight ? "var(--acc)" : "#151f30";
+  const color = isPB ? "#1a0a00" : highlight ? "#070c18" : "#5a6f96";
+  const border = isPB ? "none" : highlight ? "none" : "1px solid #1e2d44";
   return (
     <span style={{
       display:"inline-flex",alignItems:"center",justifyContent:"center",
       width:size,height:size,borderRadius:"50%",
-      background:highlight?"var(--acc)":"#151f30",
-      color:highlight?"#070c18":"#5a6f96",
+      background:bg,color,
       fontWeight:800,fontSize:size>28?13:11,margin:"2px",
-      border:highlight?"none":"1px solid #1e2d44",flexShrink:0,
+      border,flexShrink:0,
     }}>{n}</span>
   );
 }
 
 function ResultCard({result,label1}) {
-  const {combos,divCounts,prize,cost,net,div1Hits,costPerDraw}=result;
+  const {combos,divCounts,divCount,prize,cost,net,div1Hits,costPerDraw}=result;
+  const numDivs = divCount || 6;
   return (
     <div style={{background:"#0a1020",border:"1px solid #1e2d44",borderRadius:10,padding:14,marginTop:8}}>
       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-        {[1,2,3,4,5,6].map(d=>(
+        {Array.from({length:numDivs},(_,i)=>i+1).map(d=>(
           <div key={d} style={{
             background:d===1&&divCounts[1]>0?"var(--acc-dim)":"#111827",
             border:`1px solid ${d===1&&divCounts[1]>0?"var(--acc)":"#1e2d44"}`,
             borderRadius:8,padding:"7px 10px",textAlign:"center",minWidth:46,
           }}>
             <div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5}}>DIV {d}</div>
-            <div style={{color:d===1&&divCounts[1]>0?"var(--acc)":"#e2e8f0",fontWeight:800,fontSize:17}}>{divCounts[d]}</div>
+            <div style={{color:d===1&&divCounts[1]>0?"var(--acc)":"#e2e8f0",fontWeight:800,fontSize:17}}>{divCounts[d]||0}</div>
           </div>
         ))}
       </div>
@@ -3827,7 +4270,7 @@ export default function App() {
     if(nums.length>gc.minNums&&trialStatus.expired===true)return;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
-      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums);
+      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums,gc.isPowerball);
       setResults(r=>{const n=[...r];n[i]=res;return n;});
       setLoading(l=>{const n=[...l];n[i]=false;return n;});
     },50);
