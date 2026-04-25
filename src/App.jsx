@@ -31,23 +31,31 @@ function getCombinations(arr, k) {
   return [...getCombinations(rest, k-1).map(c=>[first,...c]), ...getCombinations(rest, k)];
 }
 
-function checkDiv(combo, main, supps, isPowerball) {
-  const m = combo.filter(n=>main.includes(n)).length;
-  const pb = isPowerball ? supps[0] : null;
-  const hasPB = isPowerball && combo.includes(pb);
+function checkDiv(combo, drawMain, drawSupps, isPowerball, userPB) {
+  const m = combo.filter(n=>drawMain.includes(n)).length;
   if (isPowerball) {
-    if (m===7&&hasPB) return 1;
-    if (m===7) return 2;
-    if (m===6&&hasPB) return 3;
-    if (m===6) return 4;
-    if (m===5&&hasPB) return 5;
-    if (m===4&&hasPB) return 6;
-    if (m===5) return 7;
-    if (m===3&&hasPB) return 8;
-    if (m===2&&hasPB) return 9;
+    if (userPB !== null && userPB !== undefined) {
+      const hasPB = userPB === drawSupps[0];
+      if (m===7&&hasPB) return 1;
+      if (m===7) return 2;
+      if (m===6&&hasPB) return 3;
+      if (m===6) return 4;
+      if (m===5&&hasPB) return 5;
+      if (m===4&&hasPB) return 6;
+      if (m===5) return 7;
+      if (m===3&&hasPB) return 8;
+      if (m===2&&hasPB) return 9;
+      return 0;
+    }
+    if (m===7) return 1;
+    if (m===6) return 2;
+    if (m===5) return 3;
+    if (m===4) return 4;
+    if (m===3) return 5;
+    if (m===2) return 6;
     return 0;
   }
-  const s = combo.filter(n=>supps.includes(n)).length;
+  const s = combo.filter(n=>drawSupps.includes(n)).length;
   if (m===6) return 1;
   if (m===5&&s>=1) return 2;
   if (m===5) return 3;
@@ -57,36 +65,36 @@ function checkDiv(combo, main, supps, isPowerball) {
   return 0;
 }
 
-function runBacktest(numbers, draws, prize1, comboSize, isPowerball) {
+function runBacktest(numbers, draws, prize1, comboSize, isPowerball, userPB) {
   if (!numbers || numbers.length < comboSize) return null;
   const combos = getCombinations(numbers, comboSize);
-  const divCount = isPowerball ? 9 : 6;
-  const prizes = isPowerball
-    ? {1:prize1,2:1000000,3:50000,4:5000,5:500,6:100,7:50,8:20,9:10}
-    : {1:prize1,2:prize1===1000000?6000:5000,3:450,4:30,5:15,6:10};
+  const isPBMainOnly = isPowerball && (userPB === null || userPB === undefined);
+  const divCount = isPowerball && !isPBMainOnly ? 9 : 6;
+  const prizes = isPBMainOnly
+    ? {1:0,2:0,3:0,4:0,5:0,6:0}
+    : isPowerball
+      ? {1:prize1,2:1000000,3:50000,4:5000,5:500,6:100,7:50,8:20,9:10}
+      : {1:prize1,2:prize1===1000000?6000:5000,3:450,4:30,5:15,6:10};
   const divCounts = {};
   for (let i=1;i<=divCount;i++) divCounts[i]=0;
   let prize=0; const div1Hits=[];
   for (const draw of draws) {
     let bestDiv = 0;
     for (const combo of combos) {
-      const div = checkDiv(combo, draw.nums, draw.supps, isPowerball);
-      if (div > 0 && (bestDiv === 0 || div < bestDiv)) {
-        bestDiv = div;
-      }
+      const div = checkDiv(combo, draw.nums, draw.supps, isPowerball, isPBMainOnly ? null : userPB);
+      if (div > 0 && (bestDiv === 0 || div < bestDiv)) bestDiv = div;
     }
     if (bestDiv > 0) {
       divCounts[bestDiv]++;
       prize += prizes[bestDiv] || 0;
       if (bestDiv === 1) {
-        const pb = isPowerball ? ` + PB ${draw.supps[0]}` : "";
-        const h = `${draw.date} — ${draw.nums.join(", ")}${pb}`;
+        const h = `${draw.date} — ${draw.nums.join(", ")} + PB ${draw.supps[0]}`;
         if (!div1Hits.includes(h)) div1Hits.push(h);
       }
     }
   }
   const costPerDraw = combos.length * 1.35;
-  return { combos:combos.length, divCounts, divCount, prize, cost:costPerDraw*draws.length, net:prize-costPerDraw*draws.length, div1Hits, costPerDraw };
+  return { combos:combos.length, divCounts, divCount, mode:isPBMainOnly?"main-only":"standard", prize, cost:costPerDraw*draws.length, net:prize-costPerDraw*draws.length, div1Hits, costPerDraw };
 }
 
 function getFrequency(draws, ballRange=45) {
@@ -4107,10 +4115,13 @@ function NumberBall({n,highlight,size=32,variant}) {
 }
 
 function ResultCard({result,label1}) {
-  const {combos,divCounts,divCount,prize,cost,net,div1Hits,costPerDraw}=result;
+  const {combos,divCounts,divCount,mode,prize,cost,net,div1Hits,costPerDraw}=result;
   const numDivs = divCount || 6;
+  const isMainOnly = mode==="main-only";
+  const mainLabel = {1:"7 MAIN",2:"6 MAIN",3:"5 MAIN",4:"4 MAIN",5:"3 MAIN",6:"2 MAIN"};
   return (
     <div style={{background:"#0a1020",border:"1px solid #1e2d44",borderRadius:10,padding:14,marginTop:8}}>
+      {isMainOnly&&<div style={{color:"#f59e0b",fontSize:8,letterSpacing:1.5,marginBottom:8}}>MAIN NUMBERS ONLY · ADD POWERBALL FOR FULL ENTRY</div>}
       <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
         {Array.from({length:numDivs},(_,i)=>i+1).map(d=>(
           <div key={d} style={{
@@ -4118,13 +4129,16 @@ function ResultCard({result,label1}) {
             border:`1px solid ${d===1&&divCounts[1]>0?"var(--acc)":"#1e2d44"}`,
             borderRadius:8,padding:"7px 10px",textAlign:"center",minWidth:46,
           }}>
-            <div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5}}>DIV {d}</div>
+            <div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5}}>{isMainOnly?mainLabel[d]:`DIV ${d}`}</div>
             <div style={{color:d===1&&divCounts[1]>0?"var(--acc)":"#e2e8f0",fontWeight:800,fontSize:17}}>{divCounts[d]||0}</div>
           </div>
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:10}}>
-        {[["COMBOS",combos],["$/DRAW",`$${costPerDraw.toFixed(2)}`],["PRIZE",`$${prize.toLocaleString("en-AU",{maximumFractionDigits:0})}`],["NET",`$${net.toLocaleString("en-AU",{maximumFractionDigits:0})}`,net>=0?"var(--acc)":"#f87171"]].map(([l,v,c])=>(
+        {(isMainOnly
+          ? [["COMBOS",combos],["$/DRAW",`$${costPerDraw.toFixed(2)}`]]
+          : [["COMBOS",combos],["$/DRAW",`$${costPerDraw.toFixed(2)}`],["PRIZE",`$${prize.toLocaleString("en-AU",{maximumFractionDigits:0})}`],["NET",`$${net.toLocaleString("en-AU",{maximumFractionDigits:0})}`,net>=0?"var(--acc)":"#f87171"]]
+        ).map(([l,v,c])=>(
           <div key={l}>
             <div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5}}>{l}</div>
             <div style={{color:c||"#e2e8f0",fontWeight:700,fontSize:12}}>{v}</div>
@@ -4133,7 +4147,9 @@ function ResultCard({result,label1}) {
       </div>
       {div1Hits.length>0&&(
         <div>
-          <div style={{color:"var(--acc)",fontSize:8,letterSpacing:1.5,marginBottom:6}}>{label1} DIV 1 WINS</div>
+          <div style={{color:"var(--acc)",fontSize:8,letterSpacing:1.5,marginBottom:6}}>
+            {isMainOnly?"ALL 7 MAIN MATCHED":`${label1} DIV 1 WINS`}
+          </div>
           {div1Hits.map((h,i)=>(
             <div key={i} style={{color:"#e2e8f0",fontSize:11,padding:"3px 0",borderBottom:"1px solid #1e2d44"}}>🏆 {h}</div>
           ))}
@@ -4143,10 +4159,12 @@ function ResultCard({result,label1}) {
   );
 }
 
-function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expired,minNums=6,ballRange=45}) {
+function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expired,minNums=6,ballRange=45,isPowerball,pbValue="",onPbChange}) {
   const [showP,setShowP]=useState(false);
   const numbers=value.split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=ballRange);
   const locked=numbers.length>minNums&&expired===true;
+  const pbNum=isPowerball&&pbValue?parseInt(pbValue):null;
+  const pbValid=pbNum>=1&&pbNum<=20;
   const groups={};
   presets.forEach(p=>{if(!groups[p.group])groups[p.group]=[];groups[p.group].push(p);});
   return (
@@ -4174,8 +4192,9 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
           ))}
         </div>
       )}
-      <div style={{display:"flex",gap:8,marginBottom:8}}>
-        <input value={value} onChange={e=>onChange(e.target.value)} placeholder="e.g. 4,24,25,27,31,36,41,42"
+      {isPowerball&&<div style={{color:"#5a6f96",fontSize:8,letterSpacing:1.5,marginBottom:4}}>MAIN NUMBERS (1–35)</div>}
+      <div style={{display:"flex",gap:8,marginBottom:isPowerball?6:8}}>
+        <input value={value} onChange={e=>onChange(e.target.value)} placeholder={isPowerball?"e.g. 3,9,15,22,27,31,35":"e.g. 4,24,25,27,31,36,41,42"}
           onKeyDown={e=>{if(e.key==="Enter"&&!locked)onRun();}}
           style={{flex:1,background:"#0a1020",border:`1px solid ${locked?"#f5a62388":"#1e2d44"}`,color:"#e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace"}}
         />
@@ -4185,7 +4204,7 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
             🔒 UPGRADE
           </a>
         ):(
-          <button onClick={onRun} disabled={loading} style={{
+          !isPowerball&&<button onClick={onRun} disabled={loading} style={{
             background:loading?"#1e2d44":"var(--acc)",
             color:loading?"#5a6f96":"#070c18",
             border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
@@ -4193,6 +4212,25 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
           }}>{loading?"...":"RUN"}</button>
         )}
       </div>
+      {isPowerball&&(
+        <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+          <div style={{flex:1}}>
+            <div style={{color:"#f59e0b",fontSize:8,letterSpacing:1.5,marginBottom:4}}>POWERBALL (optional · 1–20)</div>
+            <input value={pbValue} onChange={e=>onPbChange&&onPbChange(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"&&!locked)onRun();}}
+              placeholder="e.g. 7" maxLength={2}
+              style={{width:"100%",background:"#0a1020",border:`1px solid ${pbValue&&!pbValid?"#f87171":"#f59e0b44"}`,color:"#f59e0b",borderRadius:8,padding:"9px 12px",fontSize:12,outline:"none",fontFamily:"monospace",boxSizing:"border-box"}}
+            />
+          </div>
+          {!locked&&<button onClick={onRun} disabled={loading} style={{
+            background:loading?"#1e2d44":"var(--acc)",
+            color:loading?"#5a6f96":"#070c18",
+            border:"none",borderRadius:8,padding:"9px 20px",fontWeight:800,fontSize:10,
+            cursor:loading?"not-allowed":"pointer",letterSpacing:1.5,fontFamily:"inherit",
+            alignSelf:"flex-end",
+          }}>{loading?"...":"RUN"}</button>}
+        </div>
+      )}
       {locked&&(
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,background:"#0a1020",border:"1px solid #f5a62333",borderRadius:8,padding:"10px 14px",marginBottom:8}}>
           <span style={{color:"#f5a623",fontSize:10,letterSpacing:0.5}}>🔒 System play requires Premium — upgrade to unlock</span>
@@ -4202,8 +4240,9 @@ function SetInput({label,value,onChange,onRun,presets,result,loading,label1,expi
           </a>
         </div>
       )}
-      <div style={{display:"flex",flexWrap:"wrap"}}>
+      <div style={{display:"flex",flexWrap:"wrap",alignItems:"center"}}>
         {numbers.map(n=><NumberBall key={n} n={n} highlight />)}
+        {isPowerball&&pbValid&&<><span style={{color:"#5a6f96",fontSize:10,margin:"0 4px"}}>+</span><NumberBall n={pbNum} variant="powerball" /></>}
       </div>
       {result&&!locked&&<ResultCard result={result} label1={label1} />}
     </div>
@@ -4247,6 +4286,7 @@ export default function App() {
   const [game,setGame]=useState("sat");
   const [tab,setTab]=useState("backtest");
   const [sets,setSets]=useState(["","",""]);
+  const [pbSets,setPbSets]=useState(["","",""]);
   const [results,setResults]=useState([null,null,null]);
   const [loading,setLoading]=useState([false,false,false]);
 
@@ -4268,9 +4308,10 @@ export default function App() {
     const nums=sets[i].split(/[\s,]+/).map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=1&&n<=gc.ballRange);
     if(nums.length<gc.minNums)return;
     if(nums.length>gc.minNums&&trialStatus.expired===true)return;
+    const userPB=gc.isPowerball?(()=>{const v=parseInt(pbSets[i]);return(!isNaN(v)&&v>=1&&v<=20)?v:null;})():undefined;
     setLoading(l=>{const n=[...l];n[i]=true;return n;});
     setTimeout(()=>{
-      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums,gc.isPowerball);
+      const res=runBacktest(nums,filteredDraws,prize1,gc.minNums,gc.isPowerball,userPB);
       setResults(r=>{const n=[...r];n[i]=res;return n;});
       setLoading(l=>{const n=[...l];n[i]=false;return n;});
     },50);
@@ -4295,7 +4336,7 @@ export default function App() {
     });
   })();
   const resetDateFilter=()=>{setDateFrom("");setDateTo("");};
-  const switchGame=g=>{setGame(g);setSets(["","",""]);setResults([null,null,null]);setDateFrom("");setDateTo("");};
+  const switchGame=g=>{setGame(g);setSets(["","",""]);setPbSets(["","",""]);setResults([null,null,null]);setDateFrom("");setDateTo("");};
 
   return (
     <div style={{minHeight:"100vh",background:"#070c18",color:"#e2e8f0",fontFamily:"'JetBrains Mono','Fira Code',monospace","--acc":accent,"--acc-dim":accent+"22"}}>
@@ -4357,7 +4398,9 @@ export default function App() {
               </div>
             )}
             {!!currentDraws.length&&<div style={{color:"#5a6f96",fontSize:9,letterSpacing:1.5,textAlign:"center",marginBottom:16}}>
-              {`ENTER UP TO 3 SYSTEM SETS · ${gc.minNums}–${gc.maxNums} NUMBERS · RANGE 1–${gc.ballRange}`}
+              {gc.isPowerball
+                ? `ENTER UP TO 3 SYSTEM SETS · ${gc.minNums}–${gc.maxNums} MAIN · RANGE 1–${gc.ballRange} + POWERBALL 1–20`
+                : `ENTER UP TO 3 SYSTEM SETS · ${gc.minNums}–${gc.maxNums} NUMBERS · RANGE 1–${gc.ballRange}`}
             </div>}
             {!!currentDraws.length&&<>
             <div style={{background:"#0f1926",border:"1px solid #1e2d44",borderRadius:10,padding:"10px 16px",marginBottom:18,display:"flex",alignItems:"center",flexWrap:"wrap",gap:10}}>
@@ -4385,6 +4428,8 @@ export default function App() {
                 onRun={()=>runSet(i)} presets={presets} result={results[i]}
                 loading={loading[i]} label1={label1} expired={trialStatus.expired}
                 minNums={gc.minNums} ballRange={gc.ballRange}
+                isPowerball={gc.isPowerball}
+                pbValue={pbSets[i]} onPbChange={v=>setPbSets(p=>{const n=[...p];n[i]=v;return n;})}
               />
             ))}
             <div style={{textAlign:"center",marginTop:14}}>
