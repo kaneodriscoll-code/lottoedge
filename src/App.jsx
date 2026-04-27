@@ -4369,9 +4369,10 @@ export default function App() {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
           {!isPremium&&(
-            <button onClick={triggerUpgrade} style={{background:"#F5A623",color:"#000",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:900,fontSize:9,cursor:"pointer",letterSpacing:2,fontFamily:"inherit",flexShrink:0}}>
+            <a href="https://buy.stripe.com/9B600jaVl6infyc2q56Zy01" target="_blank" rel="noopener noreferrer"
+              style={{background:"#F5A623",color:"#000",border:"none",borderRadius:8,padding:"8px 16px",fontWeight:900,fontSize:9,cursor:"pointer",letterSpacing:2,fontFamily:"inherit",flexShrink:0,textDecoration:"none",display:"inline-block"}}>
               GO PREMIUM
-            </button>
+            </a>
           )}
           {isPremium&&<div style={{color:"#F5A623",fontSize:8,letterSpacing:2,fontWeight:700,flexShrink:0}}>★ PREMIUM</div>}
           <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
